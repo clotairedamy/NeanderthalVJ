@@ -44,41 +44,47 @@ pub fn ExportPanel(sources: Signal<Sources>) -> Element {
                 .file_stem()
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_else(|| "NeanderthalVJ".into());
-            let Some(out) = rfd::FileDialog::new()
-                .set_title("Export video")
-                .set_directory(videos_dir())
-                .set_file_name(format!("{stem} — {}.mp4", fmt.label()))
-                .add_filter("MP4 video", &["mp4"])
-                .save_file()
-            else {
-                return;
-            };
-
-            // the clip renders what is on screen: the panels' settings and
-            // the camera as it is now
-            let s = settings.read().clone();
-            let job = Job {
-                audio: audio.into(),
-                out,
-                format: fmt,
-                fps: s.export_fps,
-                params: params_from(&s),
-                camera: *stage.camera.lock().unwrap(),
-                assets: crate::stage::assets_dir().into(),
-                start: s.export_start,
-                length: s.export_length,
-                bitrate_mbps: if s.export_quality == "high" { 24 } else { 12 },
-                orbit: crate::stage::orbit_rate(&s),
-            };
-            let p = Arc::new(Progress::default());
-            let mut progress = progress;
-            progress.set(Some(p.clone()));
-            state.set(State::Running);
-            fraction.set(0.0);
-            let handle = nv_export::spawn(job, p.clone());
-
-            // watch it from the UI thread without ever blocking it
+            let stage = stage.clone();
+            // the dialog is asked for from a task, never inside this
+            // handler: on macOS a modal dialog runs the event loop inside
+            // the call, the interface redraws meanwhile, and redrawing a
+            // panel whose handler is still running aborts the app
             spawn(async move {
+                let Some(out) = rfd::AsyncFileDialog::new()
+                    .set_title("Export video")
+                    .set_directory(videos_dir())
+                    .set_file_name(format!("{stem} — {}.mp4", fmt.label()))
+                    .add_filter("MP4 video", &["mp4"])
+                    .save_file()
+                    .await
+                else {
+                    return;
+                };
+
+                // the clip renders what is on screen: the panels' settings
+                // and the camera as they are now
+                let s = settings.read().clone();
+                let job = Job {
+                    audio: audio.into(),
+                    out: out.path().to_path_buf(),
+                    format: fmt,
+                    fps: s.export_fps,
+                    params: params_from(&s),
+                    camera: *stage.camera.lock().unwrap(),
+                    assets: crate::stage::assets_dir().into(),
+                    start: s.export_start,
+                    length: s.export_length,
+                    bitrate_mbps: if s.export_quality == "high" { 24 } else { 12 },
+                    orbit: crate::stage::orbit_rate(&s),
+                };
+                let p = Arc::new(Progress::default());
+                let mut progress = progress;
+                progress.set(Some(p.clone()));
+                state.set(State::Running);
+                fraction.set(0.0);
+                let handle = nv_export::spawn(job, p.clone());
+
+                // watch it from the UI thread without ever blocking it
                 while !handle.is_finished() {
                     fraction.set(p.fraction());
                     tokio::time::sleep(std::time::Duration::from_millis(200)).await;

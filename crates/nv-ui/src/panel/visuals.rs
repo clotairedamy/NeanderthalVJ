@@ -120,23 +120,27 @@ fn Colors(settings: Signal<Settings>) -> Element {
     let active = s.active_palette().to_string();
     let stops = palette_stops(&s);
     let mut error = use_context::<Signal<Option<String>>>();
+    // from a task, never inside the click: see `engine_link::pick_and_load`
     let pick_picture = move |_| {
-        let Some(path) = rfd::FileDialog::new()
-            .add_filter("Pictures", &["jpg", "jpeg", "png"])
-            .set_title("Take the colours from a picture")
-            .pick_file()
-        else {
-            return;
-        };
-        match nv_render::palette::from_image(&path) {
-            Ok(colors) if !colors.is_empty() => {
-                let mut s = settings.write();
-                s.image_palette = colors;
-                s.set_palette("image");
+        spawn(async move {
+            let Some(picked) = rfd::AsyncFileDialog::new()
+                .add_filter("Pictures", &["jpg", "jpeg", "png"])
+                .set_title("Take the colours from a picture")
+                .pick_file()
+                .await
+            else {
+                return;
+            };
+            match nv_render::palette::from_image(picked.path()) {
+                Ok(colors) if !colors.is_empty() => {
+                    let mut s = settings.write();
+                    s.image_palette = colors;
+                    s.set_palette("image");
+                }
+                Ok(_) => error.set(Some("That picture has no colours to take.".into())),
+                Err(e) => error.set(Some(format!("Could not read the picture: {e}"))),
             }
-            Ok(_) => error.set(Some("That picture has no colours to take.".into())),
-            Err(e) => error.set(Some(format!("Could not read the picture: {e}"))),
-        }
+        });
     };
     let label = if s.palette_per_mode {
         format!("Palette for {}", s.viz_mode)

@@ -239,6 +239,11 @@ pub fn is_audio(path: &std::path::Path) -> bool {
 }
 
 /// Ask for a file, then load it.
+///
+/// The dialog is asked for from a task rather than straight from the
+/// click: on macOS a modal dialog runs the event loop inside the call, the
+/// interface keeps redrawing meanwhile, and redrawing a component whose
+/// event handler is still on the stack aborts the app.
 pub fn pick_and_load(
     engine: EngineHandle,
     sources: Signal<Sources>,
@@ -246,14 +251,18 @@ pub fn pick_and_load(
     busy: Signal<bool>,
     error: Signal<Option<String>>,
 ) {
-    let Some(picked) = rfd::FileDialog::new()
-        .add_filter("Audio", &AUDIO_EXTENSIONS)
-        .set_title("Load a track")
-        .pick_file()
-    else {
-        return;
-    };
-    load_path(engine, picked.to_string_lossy().to_string(), sources, readout, busy, error);
+    spawn(async move {
+        let Some(picked) = rfd::AsyncFileDialog::new()
+            .add_filter("Audio", &AUDIO_EXTENSIONS)
+            .set_title("Load a track")
+            .pick_file()
+            .await
+        else {
+            return;
+        };
+        let path = picked.path().to_string_lossy().to_string();
+        load_path(engine, path, sources, readout, busy, error);
+    });
 }
 
 /// Decode and track a file **off this thread**, then hand it to the engine.
