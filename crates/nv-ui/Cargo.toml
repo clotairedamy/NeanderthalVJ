@@ -1,0 +1,33 @@
+[package]
+name = "nv-ui"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "nv_ui"
+path = "src/lib.rs"
+
+[[bin]]
+name = "neanderthalvj"
+path = "src/main.rs"
+
+[dependencies]
+nv-audio = { path = "../nv-audio" }
+nv-dsp = { path = "../nv-dsp" }
+nv-engine = { path = "../nv-engine" }
+nv-render = { path = "../nv-render" }
+nv-export = { path = "../nv-export" }
+wgpu = { version = "22", features = ["wgsl"] }
+pollster = "0.3"
+rfd = "0.15"
+tokio = { version = "1", features = ["time"] }
+ads = { path = "../ads" }
+dioxus = { version = "=0.7.9", features = ["desktop"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+midir = "0.10"
+
+[dev-dependencies]
+dioxus-ssr = "=0.7.9"

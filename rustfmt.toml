@@ -1,0 +1,9 @@
+# Formatting for this workspace only.
+#
+# IMPORTANT: use `cargo fmt -p <crate>`, never `cargo fmt --all`.
+# `--all` also formats *local path dependencies*, and this workspace
+# depends on `ads` by path from the Artelier repo — `--all` rewrote 49 of
+# its files once already. The `fmt` alias in `.cargo/config.toml` covers
+# only this workspace's own crates.
+max_width = 100
+use_small_heuristics = "Max"

@@ -1,0 +1,14 @@
+[package]
+name = "nv-engine"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nv-audio = { path = "../nv-audio" }
+nv-dsp = { path = "../nv-dsp" }
+cpal = "0.15"
+symphonia = { version = "0.5", features = ["mp3", "aac", "isomp4", "alac", "wav", "flac", "pcm"] }
+rubato = "0.15"
+arc-swap = "1"

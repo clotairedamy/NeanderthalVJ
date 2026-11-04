@@ -1,0 +1,5 @@
+[alias]
+# Formats the app's own crates. `ads` is bundled from the Artelier design
+# system and keeps that project's style, so plain `cargo fmt --all`, which
+# would rewrite it, is avoided.
+fmt-mine = "fmt -p nv-audio -p nv-dsp -p nv-engine -p nv-export -p nv-render -p nv-ui"

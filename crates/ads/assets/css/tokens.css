@@ -1,0 +1,237 @@
+/*
+  ADS — design tokens.
+  Artelier Design System · monochrome soft UI.
+
+  Monochrome soft UI, ported from the CrawlStat desktop app's theme. Nothing
+  has a border. Shape comes entirely from two shadows — a light one up and to
+  the left, a dark one down and to the right — on a surface the same colour as
+  what is behind it. That reads as a shape extruded from the page, or pressed
+  into it. Flip the two shadows and a button becomes a hole. That is the whole
+  trick.
+
+  Taking the hue out does not weaken the style, it concentrates it: soft UI
+  already works entirely in luminance. Two rules hold the monochrome version
+  together, and a third follows from them.
+
+  1. White is the accent. The brightest value on screen is reserved for the one
+     thing we want clicked. Everything else lives in a narrow charcoal band.
+  2. Depth is the only decoration. No colour, no illustration, no gradient
+     beyond the shadow pair. Hierarchy is elevation and value alone.
+  3. The chrome is grey so the data can be coloured. Hue is spent inside a
+     plot area and nowhere else.
+
+  ## The honest caveat
+
+  Soft UI has a real accessibility problem and it would be poor form for a
+  studio that sells interface work to pretend otherwise: with no borders and a
+  surface matching its background, the edges of controls are implied by shadow
+  alone. So this implementation bends the style where it has to — text and
+  icons keep full contrast against their surface, the softness is in the
+  container and never in the content, and every interactive thing gets a
+  visible ring on focus so a keyboard user can always see where they are.
+
+  Every component and utility reads one of these custom properties, so
+  change a token and everything listing it moves together — that is the
+  difference between a system and a style guide.
+*/
+
+:root {
+  /* ─── Surfaces, darkest to lightest ────────────────────────────────────
+     Neumorphism needs a mid-tone so a shadow has room to go lighter *and*
+     darker; pure black leaves nowhere to fall. */
+  --canvas: #131315;
+  --rail: #171719;
+  --surface: #1e1e22;
+  --raised: #26262a;
+  --elevated: #2e2e33;
+  --hover: #303036;
+
+  /* Nearly invisible: rows are separated by a whisper, not a rule. */
+  --line: #2c2c31;
+  --line-strong: #3a3a41;
+
+  /* The two lights. On a near-black page a translucent shadow disappears, so
+     the shade is nearly opaque. */
+  --shade: rgb(0 0 0 / 0.8);
+  --shade-soft: rgb(0 0 0 / 0.6);
+  --highlight: rgb(255 255 255 / 0.07);
+
+  --text: #f3f3f5;
+  --text-soft: #c8c8ce;
+  --subdued: #8b8b93; /* 4.6:1 on --surface — AA for body text */
+
+  --accent: #ffffff;
+  --accent-ink: #15151a; /* text on an accent fill */
+
+  /* ─── Brand & semantic ─────────────────────────────────────────────────
+     Pigment names. Brand carries identity (never a chrome fill), semantic
+     carries state (always with a glyph). The whole system is grey so colour
+     means something when it finally shows up. */
+  --brand-primary: #b66dcc;    /* Tyrian    */
+  --brand-secondary: #2b96a4;  /* Verdigris */
+  --ok: #7bc062;               /* Celadon   */
+  --warn: #d88c00;             /* Orpiment  */
+  --bad: #e55458;              /* Vermilion */
+
+  --accent-glow: 0 0 28px rgb(255 255 255 / 0.14);
+
+  /* Luminance steps stand in for severity. Monochrome has no red, so the
+     worse it is, the brighter it is. */
+  --grade-4: #f3f3f5;
+  --grade-3: #b9b9c1;
+  --grade-2: #86868e;
+  --grade-1: #5c5c64;
+
+  /* ─── Shadow pairs ─────────────────────────────────────────────────────
+     Two darks rather than one — a tight contact shadow that reads as
+     thickness, and a wide soft fall that seats the shape — plus a light
+     highlight up and to the left. Flip the pair and a raised shape becomes a
+     pressed-in one. */
+  --soft-raised:
+    3.6px 4.8px 8.4px var(--shade),
+    8px 8px 28px var(--shade-soft),
+    -5.2px -5.2px 21px var(--highlight);
+  --soft-raised-sm:
+    1.8px 2.4px 4.2px var(--shade),
+    4px 4px 14px var(--shade-soft),
+    -2.6px -2.6px 11px var(--highlight);
+  --soft-raised-lg:
+    5.8px 7.7px 13.4px var(--shade),
+    13px 13px 45px var(--shade-soft),
+    -8.3px -8.3px 34px var(--highlight);
+  --soft-inset:
+    inset 3.2px 3.2px 8px var(--shade),
+    inset -3.2px -3.2px 8px var(--highlight);
+  --soft-inset-sm:
+    inset 2px 2px 5px var(--shade),
+    inset -2px -2px 5px var(--highlight);
+
+  /* ─── Radius ───────────────────────────────────────────────────────────
+     Large on purpose: soft UI reads as moulded rather than drawn. */
+  --radius: 20px;
+  --radius-lg: 26px;
+  --radius-sm: 13px;
+  --pill: 999px;
+
+  /* ─── Layout ─────────────────────────────────────────────────────────── */
+  --gutter: 24px;
+  --rail-w: 232px;
+  --rail-w-collapsed: 88px;
+  --row-h: 34px;
+
+  /* ─── Type ─────────────────────────────────────────────────────────────
+     Four families, each with a job: Display carries personality, UI stays
+     legible in a dense grid, Label letterspaces small caps, Data lines up
+     figures column to column. */
+  --font-display: 'Bricolage Grotesque Variable', 'Inter Tight Variable', ui-sans-serif, system-ui, sans-serif;
+  --font: 'Inter Tight Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-label: 'Martian Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  --mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --max: 1080px;
+
+  --spot: rgb(255 255 255 / 0.055);
+
+  /* ─── Data palettes ────────────────────────────────────────────────────
+     The only hue on the page. Categorical (identity), sequential (magnitude)
+     and diverging (polarity) ramps, computed and colour-blindness-checked.
+
+     Categorical: eight hues in a fixed order. Assign slot 1, 2, 3… in
+     sequence by entity, never cycle, and never pick by eye. */
+  --series-1: #3987e5; /* blue    */
+  --series-2: #d95926; /* orange  */
+  --series-3: #199e70; /* aqua    */
+  --series-4: #c98500; /* yellow  */
+  --series-5: #d55181; /* magenta */
+  --series-6: #008300; /* green   */
+  --series-7: #9085e9; /* violet  */
+  --series-8: #e66767; /* red     */
+
+  /* Sequential: one hue, light to dark, ordered by lightness so magnitude
+     survives a greyscale print. */
+  --seq-1: #0e2a47;
+  --seq-2: #143c66;
+  --seq-3: #1a5088;
+  --seq-4: #2466ab;
+  --seq-5: #2f7ccb;
+  --seq-6: #5a9bdb;
+  --seq-7: #8cbaea;
+
+  /* Diverging: two hues meeting at a neutral grey midpoint. --div-4 is the
+     midpoint, never a hue. */
+  --div-1: #b5461f;
+  --div-2: #d08a5e;
+  --div-3: #e0bda6;
+  --div-4: #86868e;
+  --div-5: #a9c3d8;
+  --div-6: #5a9bdb;
+  --div-7: #2466ab;
+
+  /* ─── Motion durations ─────────────────────────────────────────────────
+     One curve (--ease) everywhere; three durations by travel distance. */
+  --dur-control: 0.28s; /* hover, press, check */
+  --dur-move: 0.42s;    /* the rail, the tab  */
+  --dur-enter: 0.75s;   /* reveal, chart draw */
+
+  /* ─── Spacing scale ────────────────────────────────────────────────────
+     A 4px base aligned to --gutter: 24px lands on sp-5, 8px on sp-2. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 72px;
+}
+
+/* The light theme, and the default: it applies unless the visitor chose dark.
+   Its shade is the blue-grey a real object casts onto paper, not black. */
+:root:not([data-theme='dark']) {
+  --canvas: #e2e2e6;
+  --rail: #e7e7eb;
+  --surface: #ececef;
+  --raised: #f3f3f6;
+  --elevated: #f7f7fa;
+  --hover: #e9e9ee;
+
+  --line: #dbdbe1;
+  --line-strong: #c8c8d2;
+
+  --shade: rgb(163 174 198 / 0.6);
+  --shade-soft: rgb(163 174 198 / 0.42);
+  --highlight: #ffffff;
+
+  --text: #1a1a1d;
+  --text-soft: #42424a;
+  --subdued: #6b6b75; /* 4.9:1 on --surface */
+
+  --accent: #1a1a1d;
+  --accent-ink: #f7f7fa;
+
+  /* Re-stepped for the light surface, not flipped: the same hues at the
+     lightness each needs to clear 4.5:1. */
+  --brand-primary: #8a4e9c;
+  --brand-secondary: #006981;
+  --ok: #317905;
+  --warn: #9d5500;
+  --bad: #9e001f;
+  --accent-glow: 0 0 28px rgb(26 26 29 / 0.14);
+  --spot: rgb(255 255 255 / 0.75);
+
+  --grade-4: #1a1a1d;
+  --grade-3: #4e4e57;
+  --grade-2: #7c7c86;
+  --grade-1: #a6a6b0;
+
+  /* The categorical palette is restepped for the light surface; the chart
+     ramps (seq, div) stay put. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
+}

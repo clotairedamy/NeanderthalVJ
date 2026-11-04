@@ -1,0 +1,422 @@
+/* NeanderthalVJ — the layout this app adds on top of ADS.
+ *
+ * Only arrangement lives here. Every colour, radius, shadow and step of
+ * spacing is an ADS token, so the app follows the kit when the kit moves:
+ * the chrome stays grey, depth stays the only decoration, and nothing
+ * below invents a border or a hex value. */
+
+/* The page is a transparent overlay on the GPU surface. Only what paints
+ * a background is chrome; everything else is a window onto the visuals,
+ * which is why neither this nor `.nv-stage` sets one. */
+html,
+body {
+  background: transparent;
+}
+
+/* With the overlay off there is no GPU surface behind the page, so the
+   window paints itself and the stage becomes an ordinary ADS surface.
+   This is the way to tell a broken control apart from a compositing
+   artefact. */
+:root[data-overlay='off'] body {
+  background: var(--canvas);
+}
+
+:root[data-overlay='off'] .nv-stage {
+  background: var(--shade);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--soft-inset);
+}
+
+.nv-app {
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) 1fr;
+  gap: var(--sp-4);
+  height: 100vh;
+  padding: var(--sp-4);
+  background: transparent;
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* Performance mode (P): the visualization takes the whole window and the
+ * chrome gets out of the way entirely. */
+.nv-app.is-performance {
+  grid-template-columns: 1fr;
+  padding: 0;
+  gap: 0;
+}
+
+/* ---------------------------------------------------------- control column */
+
+.nv-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 0;
+  min-width: 0;
+  /* The controls are the one opaque region — they have to stay readable
+     over whatever the visuals are doing. A panel, not a negative-margin
+     patch: this is a grid child, and pulling its edges out overlapped the
+     stage beside it. */
+  padding: var(--sp-3);
+  border-radius: var(--radius-lg);
+  background: var(--canvas);
+  box-shadow: var(--soft-raised-sm);
+}
+
+.nv-controls__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  min-width: 0;
+  padding-right: var(--sp-2);
+}
+
+/* The tab row fits the column rather than pushing it wider. `flex: none`
+   matters: making it a scroll container lets flex shrink it, and in a
+   height-constrained column it collapsed to nothing. */
+.nv-controls > .ads-tabs {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nv-controls > .nv-presets {
+  flex: 0 0 auto;
+}
+
+.nv-slider {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.nv-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.nv-group__title {
+  margin: 0;
+}
+
+.nv-group__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.nv-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.nv-value-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.nv-value-row__label {
+  font-family: var(--font-label);
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+/* Rule 3: numbers are monospaced. `.num` carries the face; this only
+ * stops the readout jittering as digits change width. */
+.nv-value-row__value {
+  font-variant-numeric: tabular-nums;
+}
+
+.nv-modes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.nv-stem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.nv-presets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.nv-presets__row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: end;
+  gap: var(--sp-2);
+}
+
+.nv-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.nv-file-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nv-file-row__name {
+  font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------- stage */
+
+.nv-main {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: var(--sp-3);
+  min-width: 0;
+  min-height: 0;
+}
+
+.nv-status {
+  display: flex;
+  /* it floats over the visuals, so it carries its own legibility */
+  text-shadow: 0 1px 4px var(--shade);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--soft-raised-sm);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-2);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.nv-status__left {
+  display: flex;
+  gap: var(--sp-4);
+}
+
+.nv-status__mode {
+  color: var(--text);
+}
+
+/* The picture. Deliberately not an ADS surface: the kit is for chrome, and
+ * this is the hole the GPU surface shows through. Painting anything here —
+ * even a token background — would hide the visualization. */
+.nv-stage {
+  position: relative;
+  background: transparent;
+  min-height: 0;
+}
+
+.nv-stage__surface {
+  position: absolute;
+  inset: 0;
+}
+
+.nv-scope {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+}
+
+.nv-scope__trace {
+  display: block;
+  width: 100%;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  opacity: 0.9;
+}
+
+.nv-scope__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+/* --------------------------------------------------------------- transport */
+
+.nv-transport {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--soft-raised-sm);
+}
+
+.nv-transport__clock {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.nv-transport__seek {
+  flex: 1 1 auto;
+  min-width: 80px;
+}
+
+.nv-transport__speed {
+  flex: 0 1 140px;
+}
+
+.nv-transport__label {
+  white-space: nowrap;
+}
+
+.nv-transport__rate {
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+}
+
+@media (max-width: 1100px) {
+  .nv-app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    overflow-y: auto;
+  }
+}
+
+/* The transport's sliders wear ADS's `.ads-range`; these only set how much
+ * room each takes in the row. */
+.nv-transport__play {
+  min-width: 56px;
+}
+
+/* Visible to a screen reader, not on screen: the play button shows a
+ * symbol, which on its own announces nothing useful. */
+.nv-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A load that failed. ADS's `--bad` is the token for it; this only places
+ * the line under the readout where the eye already is. */
+.nv-error {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  color: var(--bad);
+  font-size: 0.85rem;
+}
+
+/* The export's progress. A track and a fill from ADS's own tokens: depth
+ * for the well, the accent for what is done. */
+.nv-progress {
+  height: 10px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  overflow: hidden;
+}
+
+.nv-progress__bar {
+  height: 100%;
+  border-radius: var(--pill);
+  background: var(--accent);
+  transition: width var(--dur-control) var(--ease);
+}
+
+/* The status bar's LIVE marker: the one thing in it that is a state, not
+ * a reading, so it carries the accent. */
+.nv-status__live {
+  color: var(--accent);
+  letter-spacing: 0.12em;
+}
+
+.nv-presets__reset {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* A palette's colours, drawn as data rather than chrome. */
+.nv-swatches {
+  display: block;
+  width: 100%;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.nv-colors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+
+.nv-color {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-size: 0.78rem;
+}
+
+.nv-color input {
+  width: 100%;
+  height: 32px;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.nv-mapping {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-1) var(--sp-3);
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.nv-mapping dt {
+  white-space: nowrap;
+}
+
+.nv-mapping dd {
+  margin: 0;
+}
+
+.nv-row {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* the transport's switches keep their labels on one line */
+.nv-transport .ads-choice {
+  white-space: nowrap;
+}

@@ -1,0 +1,13 @@
+[package]
+name = "nv-export"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nv-audio = { path = "../nv-audio" }
+nv-engine = { path = "../nv-engine" }
+nv-render = { path = "../nv-render" }
+wgpu = { version = "22", features = ["wgsl"] }
+pollster = "0.3"

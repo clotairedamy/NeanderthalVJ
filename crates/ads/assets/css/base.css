@@ -1,0 +1,466 @@
+/*
+  ADS — base.
+  Tokens live in tokens.css; this file holds the reset, the type roles, and
+  the soft primitives a page is assembled from. Everything is a class rather
+  than a Vue component, so it can be used from Vue, a plain template, or any
+  other runtime, and it cannot drift from the tokens.
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+  scroll-padding-top: 88px;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* The phone menu sheet is up: the page underneath holds still. */
+html.sheet-open {
+  overflow: hidden;
+}
+
+/* Theme switch: the new theme spreads out as a circle from the button that
+   asked for it (--vt-x/--vt-y, set by useTheme), over a frozen copy of the
+   old one. useTheme skips the transition under reduced motion. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  animation: ads-theme-reveal var(--dur-enter) var(--ease);
+}
+
+@keyframes ads-theme-reveal {
+  from {
+    clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 0));
+  }
+  to {
+    clip-path: circle(150vmax at var(--vt-x, 50%) var(--vt-y, 0));
+  }
+}
+
+/* No scrollbars anywhere. Everything still scrolls; nothing paints a track. */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+img,
+svg {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 540;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--mono);
+}
+
+/* ─── Type scale ───────────────────────────────────────────────────────── */
+
+.h1 {
+  font-size: clamp(2.4rem, 6.4vw, 4.1rem);
+}
+
+.h2 {
+  font-size: clamp(1.85rem, 3.9vw, 2.7rem);
+}
+
+.h3 {
+  font-size: clamp(1.1rem, 1.8vw, 1.32rem);
+  letter-spacing: -0.018em;
+}
+
+.lede {
+  font-size: clamp(1.02rem, 1.5vw, 1.16rem);
+  color: var(--text-soft);
+  line-height: 1.62;
+}
+
+.body {
+  color: var(--subdued);
+  font-size: 0.97rem;
+}
+
+/* Numbers are monospaced. Counts, codes and durations line up column to
+   column, so a column is scanned downward instead of read across. */
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--subdued);
+}
+
+@media (min-width: 620px) {
+  .eyebrow {
+    letter-spacing: 0.26em;
+  }
+}
+
+.dim {
+  color: var(--subdued);
+}
+
+/* ─── Soft primitives ──────────────────────────────────────────────────── */
+
+/* A shape standing proud of the page. */
+.soft {
+  background: var(--raised);
+  border-radius: var(--radius);
+  box-shadow: var(--soft-raised);
+}
+
+.soft-sm {
+  background: var(--raised);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--soft-raised-sm);
+}
+
+/* A well: the same shape pressed into the page. */
+.well {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--soft-inset);
+}
+
+/* Cards, not strips. Every block of content is a card with the same radius
+   and padding, floating on the canvas. */
+.card {
+  background: var(--raised);
+  border-radius: var(--radius);
+  box-shadow: var(--soft-raised);
+  padding: 26px;
+}
+
+/* Hover presses the card into the page rather than lifting it. */
+.card-press {
+  transition:
+    box-shadow var(--dur-move) var(--ease),
+    transform var(--dur-move) var(--ease);
+}
+
+.card-press:hover,
+.card-press:focus-within {
+  box-shadow: var(--soft-inset);
+  transform: translateY(1px);
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 22px;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  background: var(--raised);
+  box-shadow: var(--soft-raised-sm);
+  transition:
+    box-shadow var(--dur-control) var(--ease),
+    color var(--dur-control) var(--ease),
+    transform var(--dur-control) var(--ease);
+  white-space: nowrap;
+}
+
+.btn:hover {
+  color: var(--accent);
+}
+
+.btn:active {
+  box-shadow: var(--soft-inset-sm);
+  transform: translateY(1px);
+}
+
+/* The one accent on the page. Spending it anywhere else makes the one place
+   that matters invisible. */
+.btn-accent {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--soft-raised-sm), var(--accent-glow);
+}
+
+.btn-accent:hover {
+  color: var(--accent-ink);
+  filter: brightness(0.96);
+}
+
+.btn-quiet {
+  background: transparent;
+  box-shadow: none;
+  color: var(--subdued);
+  padding: 13px 16px;
+}
+
+.btn-quiet:hover {
+  color: var(--text);
+  background: var(--hover);
+  box-shadow: none;
+}
+
+.btn-sm {
+  padding: 9px 16px;
+  font-size: 0.85rem;
+}
+
+.kbd {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--subdued);
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+}
+
+/* ─── Chips ────────────────────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 0.73rem;
+  letter-spacing: 0.04em;
+  padding: 4px 11px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  color: var(--text-soft);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+/* ─── Layout ───────────────────────────────────────────────────────────── */
+
+.section {
+  padding: 92px 0;
+}
+
+.section-tight {
+  padding: 56px 0;
+}
+
+.section-head {
+  max-width: 660px;
+  margin-bottom: 44px;
+  display: grid;
+  gap: 16px;
+}
+
+.grid {
+  display: grid;
+  gap: var(--gutter);
+}
+
+@media (min-width: 760px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ─── Reveal ───────────────────────────────────────────────────────────── */
+
+/* Only hide what JS will later show. Without the `.js` guard set in the head,
+   a reader with scripts off gets a blank page. */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+.js [data-reveal].in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--dur-enter) var(--ease),
+    transform var(--dur-enter) var(--ease);
+}
+
+/* ─── Page transition ──────────────────────────────────────────────────── */
+
+.page-enter-active,
+.page-leave-active {
+  transition:
+    opacity var(--dur-control) var(--ease),
+    transform var(--dur-control) var(--ease);
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* ─── Chart entrances ──────────────────────────────────────────────────── */
+
+.js [data-reveal] .spark-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.js [data-reveal].in .spark-line {
+  animation: spark-draw 1.15s var(--ease) 0.12s forwards;
+}
+
+.js [data-reveal] .spark-area {
+  opacity: 0;
+}
+
+.js [data-reveal].in .spark-area {
+  animation: fade-up 0.8s var(--ease) 0.6s forwards;
+}
+
+@keyframes spark-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fade-up {
+  to {
+    opacity: 1;
+  }
+}
+
+.js [data-reveal] .grow {
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.js [data-reveal].in .grow {
+  transform: scaleX(1);
+  transition: transform 0.85s var(--ease) var(--d, 0s);
+}
+
+.js [data-reveal] .sweep {
+  clip-path: inset(0 100% 0 0);
+}
+
+.js [data-reveal].in .sweep {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path 1s var(--ease) 0.1s;
+}
+
+/* ─── Reduced motion ───────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+  .js [data-reveal] .spark-line {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+  .js [data-reveal] .spark-area,
+  .js [data-reveal].in .spark-area {
+    opacity: 1;
+    animation: none;
+  }
+  .js [data-reveal] .grow {
+    transform: none;
+  }
+  .js [data-reveal] .sweep {
+    clip-path: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

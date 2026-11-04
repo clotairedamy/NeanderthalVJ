@@ -1,0 +1,1292 @@
+/*
+  ADS — the component layer.
+
+  `main.css` holds the tokens and the base primitives the marketing page
+  needs. This file holds the rest of the system: the controls, fields,
+  indicators and containers a dashboard is actually assembled from.
+
+  Everything here is a class rather than a Vue component, because the system
+  is token-driven and most of these are a box with a shadow and a radius.
+  A class can be used from Vue, from a Flutter web view, or from a plain
+  template, and it cannot drift from the tokens. Only the pieces that need
+  state or arithmetic — the charts, the grid, the gauge — are components.
+
+  Naming: `ads-<component>` with `is-<state>` modifiers, so a grep for
+  `ads-` finds every use of the system in a codebase.
+*/
+
+/* ═══ Display type ═══════════════════════════════════════════════════════ */
+
+.ads-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  /* The optical-size axis: let the face tighten itself as it grows rather
+     than hand-correcting tracking at each step. */
+  font-variation-settings: 'opsz' 48;
+}
+
+.ads-label {
+  font-family: var(--font-label);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--subdued);
+  font-variation-settings: 'wdth' 88;
+}
+
+/* ═══ Fields ═════════════════════════════════════════════════════════════ */
+
+/* Inputs are wells: the same shape as a card, pressed into the page instead
+   of standing out of it. An input that is raised reads as something to press
+   rather than something to fill. */
+.ads-field {
+  width: 100%;
+  padding: 11px 14px;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--soft-inset);
+  transition: box-shadow var(--dur-control) var(--ease);
+}
+
+.ads-field::placeholder {
+  color: var(--subdued);
+}
+
+.ads-field:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ads-field:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ads-field.is-invalid {
+  box-shadow: var(--soft-inset), inset 0 0 0 1px var(--grade-3);
+}
+
+textarea.ads-field {
+  resize: vertical;
+  min-height: 84px;
+}
+
+select.ads-field {
+  appearance: none;
+  cursor: pointer;
+  /* The chevron, drawn in the background so the control stays one element. */
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 17px) 53%, calc(100% - 12px) 53%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+.ads-field-group {
+  display: grid;
+  gap: 7px;
+}
+
+.ads-hint {
+  font-size: 0.76rem;
+  color: var(--subdued);
+}
+
+.ads-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ads-search .ads-field {
+  padding-left: 38px;
+}
+
+.ads-search svg {
+  position: absolute;
+  left: 13px;
+  color: var(--subdued);
+  pointer-events: none;
+}
+
+/* ═══ Choice controls ════════════════════════════════════════════════════ */
+
+.ads-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  color: var(--text-soft);
+}
+
+.ads-choice input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ads-box {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  color: transparent;
+  transition:
+    background var(--dur-control) var(--ease),
+    color var(--dur-control) var(--ease),
+    box-shadow var(--dur-control) var(--ease);
+}
+
+.ads-box.is-round {
+  border-radius: 50%;
+}
+
+.ads-choice input:checked + .ads-box {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--soft-raised-sm);
+}
+
+.ads-choice input:focus-visible + .ads-box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ads-choice input:disabled ~ * {
+  opacity: 0.45;
+}
+
+/* A switch is for a setting that takes effect immediately; a checkbox is for
+   a value that is submitted. The shapes differ so the difference is read
+   before the label is. */
+.ads-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex: none;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  transition: background var(--dur-control) var(--ease);
+}
+
+.ads-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--subdued);
+  box-shadow: var(--soft-raised-sm);
+  transition:
+    transform var(--dur-control) var(--ease),
+    background var(--dur-control) var(--ease);
+}
+
+.ads-choice input:checked + .ads-switch {
+  background: var(--accent);
+}
+
+.ads-choice input:checked + .ads-switch::after {
+  transform: translateX(18px);
+  background: var(--accent-ink);
+}
+
+.ads-choice input:focus-visible + .ads-switch {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ═══ Range ══════════════════════════════════════════════════════════════ */
+
+.ads-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  cursor: ew-resize;
+}
+
+.ads-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--soft-raised-sm);
+}
+
+.ads-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--soft-raised-sm);
+}
+
+/* ═══ Segmented control ══════════════════════════════════════════════════ */
+
+.ads-segmented {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+}
+
+.ads-segmented > button {
+  padding: 8px 14px;
+  border-radius: calc(var(--radius-sm) - 4px);
+  font-size: 0.83rem;
+  color: var(--subdued);
+  white-space: nowrap;
+  transition:
+    color var(--dur-control) var(--ease),
+    background var(--dur-control) var(--ease);
+}
+
+.ads-segmented > button:hover {
+  color: var(--accent);
+}
+
+.ads-segmented > button.is-on {
+  color: var(--accent-ink);
+  background: var(--accent);
+  box-shadow: var(--soft-raised-sm);
+}
+
+/* ═══ Status, badges, deltas ═════════════════════════════════════════════ */
+
+/* Severity in a monochrome system is luminance: the worse it is, the
+   brighter it is. The glyph carries it too, so the rank survives a
+   greyscale print and a colour-vision deficiency alike. */
+.ads-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--text-soft);
+}
+
+.ads-status .ads-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: currentColor;
+}
+
+.ads-status.g4 { color: var(--grade-4); }
+.ads-status.g3 { color: var(--grade-3); }
+.ads-status.g2 { color: var(--grade-2); }
+.ads-status.g1 { color: var(--grade-1); }
+
+.ads-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.ads-badge.is-quiet {
+  background: var(--elevated);
+  color: var(--text-soft);
+  box-shadow: var(--soft-raised-sm);
+}
+
+/* A delta without a direction glyph is a number nobody can read at speed. */
+.ads-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.76rem;
+  color: var(--subdued);
+}
+
+.ads-delta.is-up { color: var(--text); }
+.ads-delta.is-down { color: var(--grade-2); }
+
+.ads-delta::before {
+  font-size: 0.7em;
+}
+
+.ads-delta.is-up::before { content: '▲'; }
+.ads-delta.is-down::before { content: '▼'; }
+.ads-delta.is-flat::before { content: '—'; }
+
+/* ═══ Meter ══════════════════════════════════════════════════════════════ */
+
+.ads-meter {
+  position: relative;
+  height: 9px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  overflow: hidden;
+}
+
+.ads-meter > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--pill);
+  background: var(--accent);
+  transition: width var(--dur-enter) var(--ease);
+}
+
+/* The threshold mark. A meter without one is decoration — the reader has no
+   way to know whether the fill is good news. */
+.ads-meter > b {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--canvas);
+}
+
+/* ═══ Tabs ═══════════════════════════════════════════════════════════════ */
+
+.ads-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ads-tabs > button {
+  position: relative;
+  padding: 11px 15px;
+  font-size: 0.9rem;
+  color: var(--subdued);
+  transition: color var(--dur-control) var(--ease);
+}
+
+.ads-tabs > button:hover {
+  color: var(--text);
+}
+
+.ads-tabs > button.is-on {
+  color: var(--text);
+}
+
+.ads-tabs > button.is-on::after {
+  content: '';
+  position: absolute;
+  left: 15px;
+  right: 15px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* ═══ Breadcrumb & pagination ════════════════════════════════════════════ */
+
+.ads-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.84rem;
+  color: var(--subdued);
+}
+
+.ads-crumbs a:hover {
+  color: var(--text);
+}
+
+.ads-crumbs .sep {
+  opacity: 0.5;
+}
+
+.ads-crumbs [aria-current] {
+  color: var(--text);
+}
+
+.ads-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ads-pager button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 9px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--subdued);
+  transition:
+    color var(--dur-control) var(--ease),
+    background var(--dur-control) var(--ease);
+}
+
+.ads-pager button:hover {
+  color: var(--accent);
+  background: var(--hover);
+}
+
+.ads-pager button.is-on {
+  color: var(--accent-ink);
+  background: var(--accent);
+  box-shadow: var(--soft-raised-sm);
+}
+
+/* ═══ Feedback ═══════════════════════════════════════════════════════════ */
+
+/* The empty state is the first screen every new user sees, so it gets a
+   component rather than a grey sentence. */
+.ads-empty {
+  display: grid;
+  justify-items: center;
+  gap: 11px;
+  padding: 38px 24px;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--soft-inset);
+}
+
+.ads-empty .glyph {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--raised);
+  box-shadow: var(--soft-raised-sm);
+  color: var(--subdued);
+}
+
+.ads-empty h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 540;
+  color: var(--text);
+}
+
+.ads-empty p {
+  max-width: 42ch;
+  font-size: 0.87rem;
+  color: var(--subdued);
+}
+
+.ads-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  box-shadow: var(--soft-raised-sm), inset 2px 0 0 var(--accent);
+  font-size: 0.88rem;
+  color: var(--text-soft);
+}
+
+.ads-banner .glyph {
+  color: var(--accent);
+  flex: none;
+  margin-top: 1px;
+}
+
+.ads-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--elevated);
+  box-shadow: var(--soft-raised-lg);
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+/* Skeletons hold the layout at the real content's dimensions, so nothing
+   shifts when the data lands. A spinner over the page throws away a layout
+   the reader had already started reading. */
+.ads-skeleton {
+  border-radius: 7px;
+  background: linear-gradient(
+    100deg,
+    var(--surface) 30%,
+    var(--elevated) 50%,
+    var(--surface) 70%
+  );
+  background-size: 220% 100%;
+  animation: ads-shimmer 1.5s linear infinite;
+}
+
+@keyframes ads-shimmer {
+  to {
+    background-position: -220% 0;
+  }
+}
+
+.ads-tooltip {
+  display: inline-block;
+  padding: 7px 11px;
+  border-radius: 9px;
+  background: var(--elevated);
+  box-shadow: var(--soft-raised);
+  font-size: 0.8rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ═══ Overlays ═══════════════════════════════════════════════════════════ */
+
+.ads-modal {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  border-radius: var(--radius);
+  background: var(--raised);
+  box-shadow: var(--soft-raised-lg);
+}
+
+.ads-scrim {
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+  padding: 26px;
+  display: grid;
+  place-items: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ads-skeleton {
+    animation: none;
+  }
+}
+
+/* ═══ Disclosure ═════════════════════════════════════════════════════════ */
+
+/* Progressive disclosure is the central move in a data-rich interface: show
+   the summary, let the reader open the detail. An accordion is its simplest
+   form, built on <details> so it works before JavaScript arrives and is
+   announced correctly without a single ARIA attribute. */
+.ads-accordion {
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  overflow: hidden;
+}
+
+.ads-accordion > details + details {
+  border-top: 1px solid var(--line);
+}
+
+.ads-accordion summary {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+  list-style: none;
+  transition: color var(--dur-control) var(--ease);
+}
+
+.ads-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.ads-accordion summary:hover {
+  color: var(--text);
+}
+
+.ads-accordion summary::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--dur-control) var(--ease);
+}
+
+.ads-accordion details[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.ads-accordion .panel {
+  padding: 0 16px 15px 34px;
+  font-size: 0.86rem;
+  color: var(--subdued);
+}
+
+/* A right-hand detail panel. In a dashboard this is where a selected row
+   explains itself, so the table never has to leave the screen. */
+.ads-drawer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 230px);
+  gap: 1px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--line);
+}
+
+.ads-drawer > * {
+  background: var(--surface);
+  padding: 16px;
+}
+
+.ads-drawer .panel {
+  background: var(--raised);
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.ads-popover {
+  display: inline-grid;
+  gap: 8px;
+  max-width: 260px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--elevated);
+  box-shadow: var(--soft-raised-lg);
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+
+/* A tree is the right shape for anything with real nesting — site structure,
+   a category hierarchy, a file system. Built on nested lists so the nesting
+   is in the markup and not only in the indentation. */
+.ads-tree,
+.ads-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.ads-tree ul {
+  margin-left: 13px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+  margin-top: 2px;
+}
+
+.ads-tree li > span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--text-soft);
+  cursor: default;
+}
+
+.ads-tree li > span:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.ads-tree .count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--subdued);
+}
+
+/* ═══ Progress ═══════════════════════════════════════════════════════════ */
+
+/* Distinct from a meter: a meter is a quantity against a threshold, this is
+   a task moving toward completion. */
+.ads-progress {
+  height: 6px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  overflow: hidden;
+}
+
+.ads-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--pill);
+  background: var(--accent);
+  transition: width 0.4s linear;
+}
+
+/* The stepper: where you are in a sequence that has a known end. */
+.ads-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ads-steps li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-right: 14px;
+  font-size: 0.84rem;
+  color: var(--subdued);
+}
+
+.ads-steps .pip {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  font-family: var(--mono);
+  font-size: 0.64rem;
+}
+
+.ads-steps .is-done .pip {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--soft-raised-sm);
+}
+
+.ads-steps .is-now {
+  color: var(--text);
+  font-weight: 540;
+}
+
+.ads-steps .is-now .pip {
+  box-shadow: var(--soft-raised-sm), 0 0 0 2px var(--accent);
+  color: var(--text);
+}
+
+.ads-spinner {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--accent);
+  animation: ads-spin 0.8s linear infinite;
+}
+
+@keyframes ads-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ads-inline-load {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--subdued);
+}
+
+/* ═══ Tags & menus ═══════════════════════════════════════════════════════ */
+
+/* A tag is a filter the reader applied and can take off again. Distinct from
+   a status chip, which describes the data and cannot be removed. */
+.ads-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px 5px 11px;
+  border-radius: var(--pill);
+  background: var(--elevated);
+  box-shadow: var(--soft-raised-sm);
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.ads-tag button {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--subdued);
+  font-size: 0.72rem;
+  line-height: 1;
+  transition:
+    color var(--dur-control) var(--ease),
+    background var(--dur-control) var(--ease);
+}
+
+.ads-tag button:hover {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+.ads-menu {
+  display: grid;
+  gap: 2px;
+  min-width: 190px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--elevated);
+  box-shadow: var(--soft-raised-lg);
+}
+
+.ads-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  color: var(--text-soft);
+  text-align: left;
+  transition:
+    background var(--dur-control) var(--ease),
+    color var(--dur-control) var(--ease);
+}
+
+.ads-menu button:hover {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+.ads-menu hr {
+  height: 1px;
+  margin: 4px 0;
+  border: 0;
+  background: var(--line);
+}
+
+.ads-menu .shortcut {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--subdued);
+}
+
+/* A link in body copy. Underlined, because colour alone is not a signal in a
+   system with no spare colour. */
+.ads-link {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--dur-control) var(--ease);
+}
+
+.ads-link:hover {
+  text-decoration-color: var(--accent);
+}
+
+/* ═══ Number input & date range ══════════════════════════════════════════ */
+
+.ads-number {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--soft-inset);
+  overflow: hidden;
+}
+
+.ads-number input {
+  width: 72px;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  color: var(--text);
+  text-align: right;
+  appearance: textfield;
+}
+
+.ads-number input::-webkit-outer-spin-button,
+.ads-number input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.ads-number .steps {
+  display: grid;
+  border-left: 1px solid var(--line);
+}
+
+.ads-number .steps button {
+  width: 28px;
+  color: var(--subdued);
+  font-size: 0.6rem;
+  line-height: 1;
+  transition:
+    color var(--dur-control) var(--ease),
+    background var(--dur-control) var(--ease);
+}
+
+.ads-number .steps button:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.ads-daterange {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--soft-inset);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+.ads-daterange .sep {
+  color: var(--subdued);
+}
+
+/* ═══ Structured list & code ═════════════════════════════════════════════ */
+
+/* Key-value detail, which is what a selected row almost always needs. A
+   two-column grid rather than a table, so the values can wrap. */
+.ads-dl {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 9px 18px;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.ads-dl dt {
+  font-family: var(--font-label);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--subdued);
+  padding-top: 3px;
+}
+
+.ads-dl dd {
+  margin: 0;
+  color: var(--text-soft);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.ads-code {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+  box-shadow: var(--soft-inset-sm);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: var(--text-soft);
+  overflow-x: auto;
+}
+
+.ads-code .tok {
+  color: var(--subdued);
+}
+
+/* ═══ Layout demos ═══════════════════════════════════════════════════════ */
+
+.ads-grid12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.ads-grid12 span {
+  height: 42px;
+  border-radius: 6px;
+  background: var(--elevated);
+  box-shadow: var(--soft-raised-sm);
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--subdued);
+}
+
+/* ═══ Colour specimens ═══════════════════════════════════════════════════ */
+
+.ads-ramp {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 3px;
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.ads-ramp span {
+  height: 44px;
+  display: grid;
+  place-items: end center;
+  padding-bottom: 5px;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+}
+
+.ads-series {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ads-series .slot {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.ads-series .chipc {
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  box-shadow: var(--soft-raised-sm);
+}
+
+.ads-series code {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--subdued);
+}
+
+/* ═══ Icon button ════════════════════════════════════════════════════════
+   A square (or round) button that holds only a glyph. Same soft surface as
+   `.btn`, sized for a 44px touch target where a text label would crowd. */
+
+.ads-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  box-shadow: var(--soft-raised-sm);
+  color: var(--text-soft);
+  transition:
+    box-shadow var(--dur-control) var(--ease),
+    color var(--dur-control) var(--ease),
+    transform var(--dur-control) var(--ease);
+}
+
+.ads-icon-button:hover {
+  color: var(--accent);
+}
+
+.ads-icon-button:active {
+  box-shadow: var(--soft-inset-sm);
+  transform: translateY(1px);
+}
+
+.ads-icon-button.is-round {
+  border-radius: 50%;
+}
+
+.ads-icon-button.is-accent {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--soft-raised-sm), var(--accent-glow);
+}
+
+.ads-icon-button.is-accent:hover {
+  color: var(--accent-ink);
+  filter: brightness(0.96);
+}
+
+/* ═══ Histogram ══════════════════════════════════════════════════════════ */
+
+/* The distribution an average hides. Single-hue: the bins are one series, so
+   height carries the count and opacity carries it again for greyscale. */
+.ads-histogram {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.ads-histogram__plot {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: end;
+  /* 2px of surface between fills so adjacent bins never read as one block. */
+  gap: 2px;
+  height: 92px;
+}
+
+.ads-histogram__bin {
+  background: var(--accent);
+  border-radius: 3px 3px 1px 1px;
+  transform-origin: bottom center;
+  transition:
+    height 0.5s var(--ease),
+    opacity 0.5s var(--ease);
+}
+
+.ads-histogram__scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--subdued);
+}
+
+/* ═══ Scatter ════════════════════════════════════════════════════════════ */
+
+/* Three series at most: scatter is an all-pairs form, and only the first
+   three palette slots clear the all-pairs colour-separation test. */
+.ads-scatter {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.ads-scatter__plot {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  overflow: visible;
+}
+
+/* Rings, not discs, so overlapping points stay countable. The 2px surface
+   ring is what separates marks that land on top of one another. */
+.ads-scatter__series circle {
+  fill: none;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  paint-order: stroke;
+}
+
+.ads-scatter__series[data-series='0'] circle { stroke: var(--series-1); }
+.ads-scatter__series[data-series='1'] circle { stroke: var(--series-2); }
+.ads-scatter__series[data-series='2'] circle { stroke: var(--series-3); }
+
+.ads-scatter__axes {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--subdued);
+}
+
+.ads-scatter__legend,
+.ads-stacked__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.ads-scatter__legend li,
+.ads-stacked__legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ads-scatter__legend [data-series='0'] .ads-dot { background: var(--series-1); }
+.ads-scatter__legend [data-series='1'] .ads-dot { background: var(--series-2); }
+.ads-scatter__legend [data-series='2'] .ads-dot { background: var(--series-3); }
+.ads-scatter__legend li[data-series='0'] .ads-dot { background: var(--series-1); }
+.ads-scatter__legend li[data-series='1'] .ads-dot { background: var(--series-2); }
+.ads-scatter__legend li[data-series='2'] .ads-dot { background: var(--series-3); }
+
+/* ═══ Stacked bar ════════════════════════════════════════════════════════ */
+
+/* Part-to-whole without a pie. Three segments at most — past that it is a
+   pie lying down, and the percentage alone says more. */
+.ads-stacked {
+  display: grid;
+  gap: 11px;
+  margin: 0;
+}
+
+.ads-stacked__track {
+  display: flex;
+  height: 14px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: var(--soft-inset-sm);
+  overflow: hidden;
+  /* The gap is the surface showing through, not a stroke: a stroke would
+     darken the fills either side of it. */
+  gap: 2px;
+}
+
+.ads-stacked__part {
+  transition: width 0.6s var(--ease);
+}
+
+.ads-stacked__part[data-part='0'] { background: var(--series-1); }
+.ads-stacked__part[data-part='1'] { background: var(--series-2); }
+.ads-stacked__part[data-part='2'] { background: var(--series-3); }
+
+.ads-stacked__legend li[data-part='0'] .ads-dot { background: var(--series-1); }
+.ads-stacked__legend li[data-part='1'] .ads-dot { background: var(--series-2); }
+.ads-stacked__legend li[data-part='2'] .ads-dot { background: var(--series-3); }
+
+.ads-stacked__name {
+  color: var(--text-soft);
+}
+
+.ads-stacked__value {
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.ads-stacked__pct {
+  font-size: 0.72rem;
+  color: var(--subdued);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ads-histogram__bin,
+  .ads-stacked__part {
+    transition: none;
+  }
+}

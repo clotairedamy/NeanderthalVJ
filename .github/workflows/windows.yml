@@ -1,0 +1,40 @@
+# Builds NeanderthalVJ for Windows and uploads it as a zip: the program and
+# the assets folder it reads the head model from. Run it from the Actions
+# tab, or push a tag such as v0.2.0.
+name: Windows build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      # the GPU and audio tests skip themselves on a runner with neither
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Build
+        run: cargo build --release -p nv-ui
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $out = "NeanderthalVJ-windows"
+          New-Item -ItemType Directory $out | Out-Null
+          Copy-Item target/release/neanderthalvj.exe "$out/NeanderthalVJ.exe"
+          Copy-Item -Recurse assets "$out/assets"
+          Copy-Item LICENSE-MIT, LICENSE-APACHE, NOTICE.md "$out/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NeanderthalVJ-windows
+          path: NeanderthalVJ-windows

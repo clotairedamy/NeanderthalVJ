@@ -1,0 +1,378 @@
+/*
+  ADS Utility — the utility-first layer of the Artelier Design System.
+
+  Where `main.css` holds the tokens and `ads.css` holds the components,
+  this file holds the single-purpose classes a screen is assembled from:
+  compose them in markup instead of writing semantic CSS for every screen.
+
+  The names are the system's own vocabulary, not a port of another
+  framework's. One word per idea:
+
+    paint-*   background   .paint-raised  .paint-accent  .paint-series-3
+    ink-*     text colour  .ink-soft      .ink-warn      .ink-subdued
+    lift      shadow, out  .lift  .lift-sm  .lift-lg      (a surface stands proud)
+    press     shadow, in   .press  .press-sm              (a surface is pushed in)
+    round-*   corner       .round  .round-lg  .round-sm  .round-pill
+    pad-*     padding      .pad-4  .pad-x-4  .pad-t-2
+    mar-*     margin       .mar-5  .mar-y-4  .mar-auto
+    gap-*     gap          .gap-3
+    row/stack flex row or column
+    grid-*    responsive columns (pair with .grid)
+    cols-12   explicit 12-column grid, .span-N spans columns
+    face-*    font family  .face-display  .face-ui  .face-label  .face-mono
+    size-*    type size    .size-xs … .size-4xl
+    align-*   text alignment
+
+  Every value reads a token from main.css, so the whole layer re-themes
+  when --canvas, --accent or --radius changes. The data palettes (series,
+  seq, div) live here too, because charts are where colour belongs.
+
+  Nothing in this file redefines a class that main.css or ads.css already
+  owns; it only adds to them.
+*/
+
+/* ═══ Background — paint-* ═══════════════════════════════════════════════
+   A surface under the content. The six value steps, then accent, brand,
+   semantic and data. */
+
+.paint-canvas { background: var(--canvas); }
+.paint-rail { background: var(--rail); }
+.paint-surface { background: var(--surface); }
+.paint-raised { background: var(--raised); }
+.paint-elevated { background: var(--elevated); }
+.paint-hover { background: var(--hover); }
+.paint-line { background: var(--line); }
+.paint-line-strong { background: var(--line-strong); }
+.paint-accent { background: var(--accent); }
+.paint-accent-ink { background: var(--accent-ink); }
+.paint-brand { background: var(--brand-primary); }
+.paint-brand-2 { background: var(--brand-secondary); }
+.paint-ok { background: var(--ok); }
+.paint-warn { background: var(--warn); }
+.paint-bad { background: var(--bad); }
+.paint-none { background: none; }
+.paint-grade-1 { background: var(--grade-1); }
+.paint-grade-2 { background: var(--grade-2); }
+.paint-grade-3 { background: var(--grade-3); }
+.paint-grade-4 { background: var(--grade-4); }
+.paint-series-1 { background: var(--series-1); }
+.paint-series-2 { background: var(--series-2); }
+.paint-series-3 { background: var(--series-3); }
+.paint-series-4 { background: var(--series-4); }
+.paint-series-5 { background: var(--series-5); }
+.paint-series-6 { background: var(--series-6); }
+.paint-series-7 { background: var(--series-7); }
+.paint-series-8 { background: var(--series-8); }
+.paint-seq-1 { background: var(--seq-1); }
+.paint-seq-2 { background: var(--seq-2); }
+.paint-seq-3 { background: var(--seq-3); }
+.paint-seq-4 { background: var(--seq-4); }
+.paint-seq-5 { background: var(--seq-5); }
+.paint-seq-6 { background: var(--seq-6); }
+.paint-seq-7 { background: var(--seq-7); }
+.paint-div-1 { background: var(--div-1); }
+.paint-div-2 { background: var(--div-2); }
+.paint-div-3 { background: var(--div-3); }
+.paint-div-4 { background: var(--div-4); }
+.paint-div-5 { background: var(--div-5); }
+.paint-div-6 { background: var(--div-6); }
+.paint-div-7 { background: var(--div-7); }
+
+/* ═══ Text colour — ink-* ════════════════════════════════════════════════
+   "Ink" rather than "text", so a grep for colour stays separate from a
+   grep for type. The three text greys, then accent, brand and semantic. */
+
+.ink { color: var(--text); }
+.ink-soft { color: var(--text-soft); }
+.ink-subdued { color: var(--subdued); }
+.ink-accent { color: var(--accent); }
+.ink-accent-ink { color: var(--accent-ink); }
+.ink-brand { color: var(--brand-primary); }
+.ink-brand-2 { color: var(--brand-secondary); }
+.ink-ok { color: var(--ok); }
+.ink-warn { color: var(--warn); }
+.ink-bad { color: var(--bad); }
+.ink-grade-1 { color: var(--grade-1); }
+.ink-grade-2 { color: var(--grade-2); }
+.ink-grade-3 { color: var(--grade-3); }
+.ink-grade-4 { color: var(--grade-4); }
+
+/* ═══ Elevation — lift / press ═══════════════════════════════════════════
+   Depth is the only decoration. .lift stands proud of the page, .press is
+   pushed into it, .flat removes both. */
+
+.lift { box-shadow: var(--soft-raised); }
+.lift-sm { box-shadow: var(--soft-raised-sm); }
+.lift-lg { box-shadow: var(--soft-raised-lg); }
+.press { box-shadow: var(--soft-inset); }
+.press-sm { box-shadow: var(--soft-inset-sm); }
+.flat { box-shadow: none; }
+
+/* ═══ Radius — round-* ═══════════════════════════════════════════════════
+   Large on purpose: soft UI reads as moulded rather than drawn. */
+
+.round { border-radius: var(--radius); }
+.round-lg { border-radius: var(--radius-lg); }
+.round-sm { border-radius: var(--radius-sm); }
+.round-pill { border-radius: var(--pill); }
+.round-none { border-radius: 0; }
+
+/* ═══ Spacing — pad-* / mar-* / gap-* ════════════════════════════════════
+   A 4px scale (--sp-1…--sp-8). pad = padding, mar = margin, gap = flex/grid
+   gap. Suffixes: -x (left+right), -y (top+bottom), -t -r -b -l (one side). */
+
+.pad-0 { padding: 0; }
+.mar-0 { margin: 0; }
+.gap-0 { gap: 0; }
+.pad-1 { padding: var(--sp-1); }
+.mar-1 { margin: var(--sp-1); }
+.gap-1 { gap: var(--sp-1); }
+.pad-2 { padding: var(--sp-2); }
+.mar-2 { margin: var(--sp-2); }
+.gap-2 { gap: var(--sp-2); }
+.pad-3 { padding: var(--sp-3); }
+.mar-3 { margin: var(--sp-3); }
+.gap-3 { gap: var(--sp-3); }
+.pad-4 { padding: var(--sp-4); }
+.mar-4 { margin: var(--sp-4); }
+.gap-4 { gap: var(--sp-4); }
+.pad-5 { padding: var(--sp-5); }
+.mar-5 { margin: var(--sp-5); }
+.gap-5 { gap: var(--sp-5); }
+.pad-6 { padding: var(--sp-6); }
+.mar-6 { margin: var(--sp-6); }
+.gap-6 { gap: var(--sp-6); }
+.pad-7 { padding: var(--sp-7); }
+.mar-7 { margin: var(--sp-7); }
+.gap-7 { gap: var(--sp-7); }
+.pad-8 { padding: var(--sp-8); }
+.mar-8 { margin: var(--sp-8); }
+.gap-8 { gap: var(--sp-8); }
+.pad-x-1 { padding-left: var(--sp-1); padding-right: var(--sp-1); }
+.pad-y-1 { padding-top: var(--sp-1); padding-bottom: var(--sp-1); }
+.pad-t-1 { padding-top: var(--sp-1); }
+.pad-r-1 { padding-right: var(--sp-1); }
+.pad-b-1 { padding-bottom: var(--sp-1); }
+.pad-l-1 { padding-left: var(--sp-1); }
+.mar-x-1 { margin-left: var(--sp-1); margin-right: var(--sp-1); }
+.mar-y-1 { margin-top: var(--sp-1); margin-bottom: var(--sp-1); }
+.mar-t-1 { margin-top: var(--sp-1); }
+.mar-r-1 { margin-right: var(--sp-1); }
+.mar-b-1 { margin-bottom: var(--sp-1); }
+.mar-l-1 { margin-left: var(--sp-1); }
+.pad-x-2 { padding-left: var(--sp-2); padding-right: var(--sp-2); }
+.pad-y-2 { padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+.pad-t-2 { padding-top: var(--sp-2); }
+.pad-r-2 { padding-right: var(--sp-2); }
+.pad-b-2 { padding-bottom: var(--sp-2); }
+.pad-l-2 { padding-left: var(--sp-2); }
+.mar-x-2 { margin-left: var(--sp-2); margin-right: var(--sp-2); }
+.mar-y-2 { margin-top: var(--sp-2); margin-bottom: var(--sp-2); }
+.mar-t-2 { margin-top: var(--sp-2); }
+.mar-r-2 { margin-right: var(--sp-2); }
+.mar-b-2 { margin-bottom: var(--sp-2); }
+.mar-l-2 { margin-left: var(--sp-2); }
+.pad-x-3 { padding-left: var(--sp-3); padding-right: var(--sp-3); }
+.pad-y-3 { padding-top: var(--sp-3); padding-bottom: var(--sp-3); }
+.pad-t-3 { padding-top: var(--sp-3); }
+.pad-r-3 { padding-right: var(--sp-3); }
+.pad-b-3 { padding-bottom: var(--sp-3); }
+.pad-l-3 { padding-left: var(--sp-3); }
+.mar-x-3 { margin-left: var(--sp-3); margin-right: var(--sp-3); }
+.mar-y-3 { margin-top: var(--sp-3); margin-bottom: var(--sp-3); }
+.mar-t-3 { margin-top: var(--sp-3); }
+.mar-r-3 { margin-right: var(--sp-3); }
+.mar-b-3 { margin-bottom: var(--sp-3); }
+.mar-l-3 { margin-left: var(--sp-3); }
+.pad-x-4 { padding-left: var(--sp-4); padding-right: var(--sp-4); }
+.pad-y-4 { padding-top: var(--sp-4); padding-bottom: var(--sp-4); }
+.pad-t-4 { padding-top: var(--sp-4); }
+.pad-r-4 { padding-right: var(--sp-4); }
+.pad-b-4 { padding-bottom: var(--sp-4); }
+.pad-l-4 { padding-left: var(--sp-4); }
+.mar-x-4 { margin-left: var(--sp-4); margin-right: var(--sp-4); }
+.mar-y-4 { margin-top: var(--sp-4); margin-bottom: var(--sp-4); }
+.mar-t-4 { margin-top: var(--sp-4); }
+.mar-r-4 { margin-right: var(--sp-4); }
+.mar-b-4 { margin-bottom: var(--sp-4); }
+.mar-l-4 { margin-left: var(--sp-4); }
+.pad-x-5 { padding-left: var(--sp-5); padding-right: var(--sp-5); }
+.pad-y-5 { padding-top: var(--sp-5); padding-bottom: var(--sp-5); }
+.pad-t-5 { padding-top: var(--sp-5); }
+.pad-r-5 { padding-right: var(--sp-5); }
+.pad-b-5 { padding-bottom: var(--sp-5); }
+.pad-l-5 { padding-left: var(--sp-5); }
+.mar-x-5 { margin-left: var(--sp-5); margin-right: var(--sp-5); }
+.mar-y-5 { margin-top: var(--sp-5); margin-bottom: var(--sp-5); }
+.mar-t-5 { margin-top: var(--sp-5); }
+.mar-r-5 { margin-right: var(--sp-5); }
+.mar-b-5 { margin-bottom: var(--sp-5); }
+.mar-l-5 { margin-left: var(--sp-5); }
+.pad-x-6 { padding-left: var(--sp-6); padding-right: var(--sp-6); }
+.pad-y-6 { padding-top: var(--sp-6); padding-bottom: var(--sp-6); }
+.pad-t-6 { padding-top: var(--sp-6); }
+.pad-r-6 { padding-right: var(--sp-6); }
+.pad-b-6 { padding-bottom: var(--sp-6); }
+.pad-l-6 { padding-left: var(--sp-6); }
+.mar-x-6 { margin-left: var(--sp-6); margin-right: var(--sp-6); }
+.mar-y-6 { margin-top: var(--sp-6); margin-bottom: var(--sp-6); }
+.mar-t-6 { margin-top: var(--sp-6); }
+.mar-r-6 { margin-right: var(--sp-6); }
+.mar-b-6 { margin-bottom: var(--sp-6); }
+.mar-l-6 { margin-left: var(--sp-6); }
+.pad-x-7 { padding-left: var(--sp-7); padding-right: var(--sp-7); }
+.pad-y-7 { padding-top: var(--sp-7); padding-bottom: var(--sp-7); }
+.pad-t-7 { padding-top: var(--sp-7); }
+.pad-r-7 { padding-right: var(--sp-7); }
+.pad-b-7 { padding-bottom: var(--sp-7); }
+.pad-l-7 { padding-left: var(--sp-7); }
+.mar-x-7 { margin-left: var(--sp-7); margin-right: var(--sp-7); }
+.mar-y-7 { margin-top: var(--sp-7); margin-bottom: var(--sp-7); }
+.mar-t-7 { margin-top: var(--sp-7); }
+.mar-r-7 { margin-right: var(--sp-7); }
+.mar-b-7 { margin-bottom: var(--sp-7); }
+.mar-l-7 { margin-left: var(--sp-7); }
+.pad-x-8 { padding-left: var(--sp-8); padding-right: var(--sp-8); }
+.pad-y-8 { padding-top: var(--sp-8); padding-bottom: var(--sp-8); }
+.pad-t-8 { padding-top: var(--sp-8); }
+.pad-r-8 { padding-right: var(--sp-8); }
+.pad-b-8 { padding-bottom: var(--sp-8); }
+.pad-l-8 { padding-left: var(--sp-8); }
+.mar-x-8 { margin-left: var(--sp-8); margin-right: var(--sp-8); }
+.mar-y-8 { margin-top: var(--sp-8); margin-bottom: var(--sp-8); }
+.mar-t-8 { margin-top: var(--sp-8); }
+.mar-r-8 { margin-right: var(--sp-8); }
+.mar-b-8 { margin-bottom: var(--sp-8); }
+.mar-l-8 { margin-left: var(--sp-8); }
+.mar-auto { margin: auto; }
+.mar-x-auto { margin-left: auto; margin-right: auto; }
+.mar-y-auto { margin-top: auto; margin-bottom: auto; }
+
+/* ═══ Layout — row / stack ═══════════════════════════════════════════════
+   Flex is the default layout primitive. .row is horizontal, .stack vertical. */
+
+.row { display: flex; }
+.stack { display: flex; flex-direction: column; }
+.inline { display: inline-flex; }
+.block { display: block; }
+.inline-block { display: inline-block; }
+.wrap { flex-wrap: wrap; }
+.no-wrap { flex-wrap: nowrap; }
+.fill { flex: 1 1 0%; min-width: 0; }
+.shrink-0 { flex: none; }
+.items-start { align-items: flex-start; }
+.items-center { align-items: center; }
+.items-end { align-items: flex-end; }
+.items-stretch { align-items: stretch; }
+.items-baseline { align-items: baseline; }
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+.between { justify-content: space-between; }
+.around { justify-content: space-around; }
+.evenly { justify-content: space-evenly; }
+.self-start { align-self: flex-start; }
+.self-center { align-self: center; }
+.self-end { align-self: flex-end; }
+.self-stretch { align-self: stretch; }
+.center { align-items: center; justify-content: center; }
+
+/* ═══ Grid ═══════════════════════════════════════════════════════════════
+   .grid (in main.css) already sets display:grid with the shared gutter; the
+   grid-N classes add responsive columns to it. .cols-12 is a self-contained
+   twelve-column grid for the layout rules in the design system. */
+
+@media (min-width: 760px) {
+  .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 760px) {
+  .grid-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (min-width: 760px) {
+  .grid-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+}
+.cols-12 { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--sp-4); }
+.span-1 { grid-column: span 1; }
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-4 { grid-column: span 4; }
+.span-5 { grid-column: span 5; }
+.span-6 { grid-column: span 6; }
+.span-7 { grid-column: span 7; }
+.span-8 { grid-column: span 8; }
+.span-9 { grid-column: span 9; }
+.span-10 { grid-column: span 10; }
+.span-11 { grid-column: span 11; }
+.span-12 { grid-column: span 12; }
+.span-full { grid-column: 1 / -1; }
+.auto-fit { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.auto-fill { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+
+/* ═══ Type ═══════════════════════════════════════════════════════════════
+   main.css owns the display roles (.h1 .h2 .h3 .lede .body .num .eyebrow
+   .dim). This layer adds the pieces those do not: the four faces, a size
+   ramp, weights, alignment and the small text effects. */
+
+.face-display { font-family: var(--font-display); }
+.face-ui { font-family: var(--font); }
+.face-label { font-family: var(--font-label); }
+.face-mono { font-family: var(--mono); }
+.size-xs { font-size: 0.68rem; }
+.size-sm { font-size: 0.78rem; }
+.size-md { font-size: 0.88rem; }
+.size-base { font-size: 0.97rem; }
+.size-lg { font-size: 1.12rem; }
+.size-xl { font-size: 1.32rem; }
+.size-2xl { font-size: 1.7rem; }
+.size-3xl { font-size: 2.4rem; }
+.size-4xl { font-size: 3.2rem; }
+.regular { font-weight: 400; }
+.medium { font-weight: 500; }
+.semibold { font-weight: 540; }
+.bold { font-weight: 600; }
+.align-left { text-align: left; }
+.align-center { text-align: center; }
+.align-right { text-align: right; }
+.caps { text-transform: uppercase; }
+.underline { text-decoration: underline; }
+.no-underline { text-decoration: none; }
+.tracked { letter-spacing: 0.12em; }
+.tracked-wide { letter-spacing: 0.26em; }
+.no-break { white-space: nowrap; }
+.truncate { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* ═══ Measure ════════════════════════════════════════════════════════════ */
+
+.max { max-width: var(--max); margin-inline: auto; }
+.full { width: 100%; }
+.fit { width: fit-content; }
+.measure { max-width: 65ch; }
+.min-0 { min-width: 0; }
+
+/* ═══ Motion ═════════════════════════════════════════════════════════════
+   One curve (--ease) everywhere; three durations by travel distance. .tween
+   is a ready-made transition. main.css collapses all of it under
+   prefers-reduced-motion, so nothing here needs its own guard. */
+
+.ease { transition-timing-function: var(--ease); }
+.dur-fast { transition-duration: var(--dur-control); }
+.dur-mid { transition-duration: var(--dur-move); }
+.dur-slow { transition-duration: var(--dur-enter); }
+.tween { transition: all var(--dur-control) var(--ease); }
+.tween-slow { transition: all var(--dur-enter) var(--ease); }
+.still { transition: none; animation: none; }
+
+/* ═══ Visibility ══════════════════════════════════════════════════════════ */
+
+.hide { display: none; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
