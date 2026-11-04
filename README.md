@@ -27,15 +27,158 @@ Instagram-ready video.
 Number keys 1–4 switch between them while playing, or let **Auto-switch**
 move on every few bars and at the drops.
 
-## Getting started
+## Install and run
 
-You need [Rust](https://rustup.rs) 1.85 or newer. Then:
+NeanderthalVJ is run from its source code. You install three free tools
+once; after that, one command builds the app and opens it. Copy each
+command below into a terminal and press Enter.
 
-    cargo run --release -p nv-ui
+### On a Mac
 
-**Use `--release`.** Finding the beats runs the whole track through an
-STFT, a mel filterbank and a tracking pass; a debug build takes minutes on
-a song a release build finishes in seconds.
+Works on Apple Silicon and Intel Macs. Open **Terminal** (press ⌘ Space,
+type *Terminal*, press Enter).
+
+**1. Install Apple's command-line tools.** A window pops up; click
+*Install* and wait for it to finish. If it says they are already
+installed, go on.
+
+```bash
+xcode-select --install
+```
+
+**2. Install Rust**, the language the app is written in:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+```
+
+Then make it available in this Terminal window:
+
+```bash
+source "$HOME/.cargo/env"
+```
+
+**3. Download NeanderthalVJ**:
+
+```bash
+git clone https://github.com/clotairedamy/NeanderthalVJ.git
+```
+
+```bash
+cd NeanderthalVJ
+```
+
+**4. Build and start it**:
+
+```bash
+cargo run --release -p nv-ui
+```
+
+The first build takes a few minutes; later starts take seconds. The app
+opens in its own window. Leave Terminal open while you use it.
+
+**5. Optional: video export.** Exporting needs
+[ffmpeg](https://ffmpeg.org). With [Homebrew](https://brew.sh):
+
+```bash
+brew install ffmpeg
+```
+
+### On Windows 10 or 11
+
+Open **PowerShell** (press the Windows key, type *PowerShell*, press
+Enter). `winget` comes with Windows; if PowerShell does not know it,
+install *App Installer* from the Microsoft Store.
+
+**1. Install Microsoft's C++ build tools**, which Rust uses to make
+Windows programs. This is a large download (a few GB) and can take a
+while; accept the prompt that asks for permission.
+
+```powershell
+winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+```
+
+**2. Install Rust and Git**:
+
+```powershell
+winget install --id Rustlang.Rustup -e
+```
+
+```powershell
+winget install --id Git.Git -e
+```
+
+**3. Close PowerShell and open a new one**, so it finds what you just
+installed. Then make sure Rust is ready:
+
+```powershell
+rustup default stable
+```
+
+**4. Download NeanderthalVJ**. A short folder such as your home folder,
+where PowerShell starts, is best; very deep folders can hit Windows'
+path-length limit.
+
+```powershell
+git clone https://github.com/clotairedamy/NeanderthalVJ.git
+```
+
+```powershell
+cd NeanderthalVJ
+```
+
+**5. Build and start it**:
+
+```powershell
+cargo run --release -p nv-ui
+```
+
+The first build takes several minutes; later starts take seconds. Leave
+PowerShell open while you use the app. Windows 10 and 11 already have
+WebView2, which draws the controls.
+
+**6. Optional: video export.** Exporting needs ffmpeg:
+
+```powershell
+winget install --id Gyan.FFmpeg -e
+```
+
+Then open a new PowerShell window before starting the app again.
+
+### Next time
+
+Open a terminal, go to the folder and start it:
+
+```bash
+cd NeanderthalVJ
+```
+
+```bash
+cargo run --release -p nv-ui
+```
+
+To get the latest version first, run `git pull` in that folder.
+
+### If something goes wrong
+
+- **`cargo` or `git` is not recognised**: close the terminal and open a
+  new one. On a Mac you can instead run `source "$HOME/.cargo/env"`.
+- **Windows: `link.exe not found`**: the C++ build tools are missing or
+  only half installed. Run step 1 again, then open a new PowerShell.
+- **Mac: `xcrun: error` or `libclang` not found**: run step 1
+  (`xcode-select --install`) again.
+- **Live input hears nothing on a Mac**: macOS asks once whether Terminal
+  may use the microphone. If you said no, allow it in *System Settings →
+  Privacy & Security → Microphone*, then restart the app.
+- **Export says ffmpeg is missing**: install it as above and open a new
+  terminal. If it lives somewhere unusual, set `NV_FFMPEG` to its path.
+- **Always use `--release`.** Without it the build is unoptimised, and
+  finding the beats in a song takes minutes instead of seconds.
+
+For anything else, [open an issue](https://github.com/clotairedamy/NeanderthalVJ/issues)
+with what you ran and what the terminal printed.
+
+## Using it
 
 - **Load a track** from the Source tab, or drop it on the window. WAV,
   FLAC, MP3, AAC/M4A and ALAC decode; 44.1 and 48 kHz play untouched.

@@ -12,7 +12,8 @@ terminal, include it.
 
 ## Making a change
 
-1. Build and run it: `cargo run --release -p nv-ui`.
+1. Install the tools and run it as the README's *Install and run* says:
+   `cargo run --release -p nv-ui`.
 2. Keep the tests passing: `cargo test --workspace`. Add a test for the
    behaviour you change. Most of the code can be tested without a window,
    a sound card or a GPU; see the `tests` folder of each crate.
