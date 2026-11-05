@@ -345,6 +345,7 @@ impl PostFx {
 
     /// Composite the stage, drawn into [`PostFx::target`], onto `view`.
     /// `stage` is the stage's rectangle in the target, in pixels.
+    #[allow(clippy::too_many_arguments)]
     pub fn apply(
         &mut self,
         device: &wgpu::Device,
