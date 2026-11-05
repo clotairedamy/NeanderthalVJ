@@ -68,6 +68,8 @@ pub struct Uniforms {
     /// The key light's direction (`w` unused). It turns with the camera,
     /// so the head is lit from the viewer's side from any angle.
     pub key: [f32; 4],
+    /// `x` 1 for the Depth Point Cloud's look, 0 for Synth Cloud's original.
+    pub look: [f32; 4],
 }
 
 /// The key light, for the camera in front: from the camera's left and
@@ -116,6 +118,7 @@ impl Default for Uniforms {
             fx2: [0.0; 4],
             paths: [[0.0; 4]; 14],
             key: KEY_LIGHT,
+            look: [1.0, 0.0, 0.0, 0.0],
         }
     }
 }

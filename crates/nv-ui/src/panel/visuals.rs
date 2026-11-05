@@ -301,15 +301,17 @@ fn DepthPointCloud(settings: Signal<Settings>) -> Element {
                 }
                 Hint { "How strongly the head effect plays. 0 turns it off; 2 is twice the usual." }
             }
-            Slider {
-                label: "Camera punch",
-                display: format!("{:.2}", s.pc_camera_punch),
-                value: s.pc_camera_punch * 100.0,
-                min: 0.0,
-                max: 200.0,
-                onchange: move |v: f64| settings.write().pc_camera_punch = v / 100.0,
+            if !synth_mode {
+                Slider {
+                    label: "Camera punch",
+                    display: format!("{:.2}", s.pc_camera_punch),
+                    value: s.pc_camera_punch * 100.0,
+                    min: 0.0,
+                    max: 200.0,
+                    onchange: move |v: f64| settings.write().pc_camera_punch = v / 100.0,
+                }
+                Hint { "The camera lunges in on every beat and eases back, throwing the head at you. The head itself never moves. 0 holds the camera still." }
             }
-            Hint { "The camera lunges in on every beat and eases back, throwing the head at you. The head itself never moves. 0 holds the camera still." }
             Slider {
                 label: "Point size",
                 display: format!("{:.1}", s.pc_point_size),
@@ -363,21 +365,17 @@ fn DepthPointCloud(settings: Signal<Settings>) -> Element {
                 max: 200.0,
                 onchange: move |v: f64| settings.write().pc_drum_glitch = v / 100.0,
             }
-            Hint { "How hard each drum hit glitches the head, in the look below. 0 leaves it untouched." }
-            AdsField {
-                label: "Glitch look",
-                field_type: FieldType::Select,
-                value: s.pc_glitch_look.clone(),
-                options: vec![
-                    SegOption::new("Facets: a cut-crystal flash", "facets"),
-                    SegOption::new("Slices: offset slabs", "slices"),
-                ],
-                hint: if s.pc_glitch_look == "slices" {
-                    "Each hit cuts the head into slabs that twist apart and snap back."
-                } else {
-                    "Each hit turns the head into a cut crystal for a moment: flat-lit facets with glowing cut lines, cut afresh every hit. The shape never moves."
-                },
-                oninput: move |e: FormEvent| settings.write().pc_glitch_look = e.value(),
+            Hint { "Each drum hit slices the head into offset slabs that snap back. 0 leaves it whole." }
+            if !synth_mode {
+                Slider {
+                    label: "Facet flash",
+                    display: format!("{:.2}", s.pc_facets),
+                    value: s.pc_facets * 100.0,
+                    min: 0.0,
+                    max: 200.0,
+                    onchange: move |v: f64| settings.write().pc_facets = v / 100.0,
+                }
+                Hint { "Each drum hit turns the head into a cut crystal for a moment: flat-lit facets with glowing seams, cut afresh every hit. Only the light changes; the shape never moves. Works alongside Drum glitch or on its own." }
             }
             if synth_mode {
                 Hint { "Synth Cloud always follows the synth: pulse width, LFO rate and how fast the tone morphs." }

@@ -66,9 +66,12 @@ pub struct Knobs {
     pub effect_amount: f32,
     /// How far the camera lunges in on each beat (`pc_camera_punch`).
     pub punch: f32,
-    /// What a drum hit does with the Drum glitch: false slices the head into
-    /// offset slabs, true cuts it into lit facets for a moment.
-    pub facets: bool,
+    /// How hard a drum hit flashes the head into lit facets
+    /// (`pc_facets`), apart from the Drum glitch's slices. 0 for none.
+    pub facets: f32,
+    /// The Depth Point Cloud's look. False for Synth Cloud, which renders
+    /// as it always did: its own light, streaks, rings and shell.
+    pub depth_cloud: bool,
 }
 
 impl Default for Knobs {
@@ -92,7 +95,8 @@ impl Default for Knobs {
             effect: crate::head_fx::HeadEffect::None,
             effect_amount: 1.0,
             punch: 0.0,
-            facets: true,
+            facets: 0.0,
+            depth_cloud: true,
         }
     }
 }
@@ -147,6 +151,8 @@ pub struct BustMotion {
     sheet_phase: f32,
     shim_phase: f32,
     reso: f32,
+    /// The facet flash: thrown by drum hits, falling away fast.
+    facet: f32,
 }
 
 impl Default for BustMotion {
@@ -188,6 +194,7 @@ impl Default for BustMotion {
             sheet_phase: 0.0,
             shim_phase: 0.0,
             reso: 0.0,
+            facet: 0.0,
         }
     }
 }
@@ -235,10 +242,8 @@ impl BustMotion {
         if hit > 0.12 && self.wall - self.last_ghost > 0.1 {
             self.last_ghost = self.wall;
             self.glitch = (self.glitch + 0.7 * hit * k.beat_impulse * k.drum_glitch).min(1.3);
-            // the slab look streaks too; the facets stay clean
-            if !k.facets {
-                self.smear = (self.smear + 0.5 * hit * k.drum_glitch).min(1.0);
-            }
+            self.smear = (self.smear + 0.5 * hit * k.drum_glitch).min(1.0);
+            self.facet = (self.facet + 1.4 * hit * k.facets).min(1.5);
             self.seed = self.rand() * 100.0;
         }
     }
@@ -293,6 +298,11 @@ impl BustMotion {
     /// The song's intensity: 1 at full strength, down to 0.55 in a lull.
     pub fn intensity(&self) -> f32 {
         self.intensity
+    }
+
+    /// The facet flash, 0..1.5: how much of the head is cut crystal now.
+    pub fn facet(&self) -> f32 {
+        self.facet
     }
 
     /// Whether the music came back in -- a drop -- on the last update.
@@ -369,7 +379,7 @@ impl BustMotion {
             // below instead of by cutting the face apart
             let slab = k.drum_glitch;
             self.glitch = (self.glitch + if big { 1.05 } else { 0.62 } * kk * slab).min(1.2);
-            if big && !k.facets {
+            if big {
                 self.smear = (self.smear + 0.8 * kk * slab).min(1.0);
             }
             self.seed = self.rand() * 100.0;
@@ -402,6 +412,7 @@ impl BustMotion {
             self.nod = (0.4 + 0.6 * frame.beat_strength as f32).min(1.0);
         }
         self.nod *= (-dt * 6.0).exp();
+        self.facet *= (-dt * 4.0).exp();
 
         if k.synth {
             self.synth_drive(frame, dt, drama, k);

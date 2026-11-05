@@ -130,8 +130,10 @@ impl Scene {
         let frame = &shaped;
         let knobs = params.knobs;
         self.motion.update(frame, dt, beat, knobs, &mut self.uniforms);
-        // only the head has a head effect, and a camera to punch
-        let head = params.grid.is_none() && params.generative.is_none();
+        // only the head has a head effect, and a camera to punch; and only
+        // the Depth Point Cloud -- Synth Cloud keeps its original look
+        let head = params.grid.is_none() && params.generative.is_none() && knobs.depth_cloud;
+        self.uniforms.look = [if knobs.depth_cloud { 1.0 } else { 0.0 }, 0.0, 0.0, 0.0];
         if self.motion.dropped() {
             self.head_fx.drop_in();
         }
@@ -175,11 +177,11 @@ impl Scene {
         };
         // the key light goes round with the camera: seen from behind, a
         // light fixed in front left the head a black hole
-        let (s, c) = camera.azimuth.sin_cos();
+        let (s, c) = if knobs.depth_cloud { camera.azimuth.sin_cos() } else { (0.0, 1.0) };
         let [kx, ky, kz, _] = crate::renderer::KEY_LIGHT;
-        // key.w picks the drum glitch's look: 1 facets, 0 slabs
-        let look = if knobs.facets { 1.0 } else { 0.0 };
-        self.uniforms.key = [kx * c - ky * s, kx * s + ky * c, kz, look];
+        // key.w carries the facet flash
+        let facet = if knobs.depth_cloud { self.motion.facet() } else { 0.0 };
+        self.uniforms.key = [kx * c - ky * s, kx * s + ky * c, kz, facet];
         let (camera, fov) = lens(camera, params.perspective);
         self.uniforms.view_proj = view_proj_lens(aspect, camera, fov).to_cols_array_2d();
         // eye.w 0 asks the head to mark itself in the alpha, so the effects

@@ -66,6 +66,8 @@ struct Uniforms {
     paths     : array<vec4<f32>, 14>,
     // the key light, turned with the camera
     key       : vec4<f32>,
+    // x 1 for the Depth Point Cloud's look, 0 for Synth Cloud's original
+    look      : vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
@@ -162,10 +164,8 @@ fn deform(p_in : vec3<f32>, n_in : vec3<f32>, zone : f32) -> Deformed {
     let h1 = hash(band * 12.9898 + u.seed);
     let h2 = hash(band * 78.233 + u.seed * 1.7);
     let calm = step(0.35, h1) * smoothstep(0.25, 0.40, zone);
-    // the slab glitch only in its own look (key.w 0); the facets are light
-    let slabs = select(1.0, 0.0, u.key.w > 0.5);
-    let twist = u.glitch * slabs * (h1 * 2.0 - 1.0) * 0.62 * calm;
-    let slide = u.glitch * slabs * (h2 * 2.0 - 1.0) * 0.14 * calm;
+    let twist = u.glitch * (h1 * 2.0 - 1.0) * 0.62 * calm;
+    let slide = u.glitch * (h2 * 2.0 - 1.0) * 0.14 * calm;
 
     // the whole head moves as one; only the neck bends
     let hw = smoothstep(0.16, 0.36, zone);
@@ -432,6 +432,8 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     var n = part.nrm;
     let zone = part.zone;
     let a_rnd = part.rnd;
+    // the Depth Point Cloud's changes; Synth Cloud renders as it always did
+    let dpc = u.look.x > 0.5;
 
     // each band lives in its own part of the body
     let w_low  = band_w_low(zone);
@@ -455,12 +457,17 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     // each region along the band axis answers its own band: with light
     // always, and lifted off the surface only as far as Band push asks
     let band_e = band_light(part.pos, zone);
-    // A share of the particles lifts off as a glowing layer: lifting them
-    // all inflated the head, which at full push looked swollen. The rest
-    // stay on the skin, so the silhouette keeps its shape.
-    let lifter = step(hash(a_rnd * 271.9), 0.35);
-    let lifted = band_e * u.band_push * lifter * (0.4 + 0.6 * hash(a_rnd * 33.7));
-    p = p + n * lifted * 0.14;
+    // In the Depth Point Cloud a share of the particles lifts off as a
+    // glowing layer: lifting them all inflated the head, which at full push
+    // looked swollen. Synth Cloud keeps the original, whole-surface push.
+    var lifted = 0.0;
+    if (dpc) {
+        let lifter = step(hash(a_rnd * 271.9), 0.35);
+        lifted = band_e * u.band_push * lifter * (0.4 + 0.6 * hash(a_rnd * 33.7));
+        p = p + n * lifted * 0.14;
+    } else {
+        p = p + n * band_e * u.band_push * 0.09;
+    }
 
     // a share of the particles streak sideways, as ghost trails
     let dir = select(1.0, -1.0, d.h2 < 0.5);
@@ -469,8 +476,13 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     // sideways across the screen, whatever the angle: along world x, as it
     // was, a camera at the side saw the slices slide into the head and
     // leave black bands that jumped up and down with the music
-    let across = normalize(cross(u.eye.xyz - p, vec3<f32>(0.0, 0.0, 1.0)) + vec3<f32>(1e-4, 0.0, 0.0));
-    p = p + across * streak;
+    // (the Depth Point Cloud only; Synth Cloud streaks along x as it did)
+    if (dpc) {
+        let across = normalize(cross(u.eye.xyz - p, vec3<f32>(0.0, 0.0, 1.0)) + vec3<f32>(1e-4, 0.0, 0.0));
+        p = p + across * streak;
+    } else {
+        p.x = p.x + streak;
+    }
 
     // grazing surfaces dissolve: silhouette particles loosen into grains.
     // Not on the front of the face, though: the eye sockets and the lids
@@ -480,14 +492,20 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     // only for a camera in front -- so from the side the temple and the
     // skin behind the eye counted as outline, loosened, and half of it sank
     // inside the head: black holes.
-    let facing = abs(dot(n, normalize(u.eye.xyz - p)));
+    // (the Depth Point Cloud only; Synth Cloud keeps abs(n.y))
+    var facing = abs(n.y);
+    if (dpc) { facing = abs(dot(n, normalize(u.eye.xyz - p))); }
     let edge = pow(1.0 - facing, 3.0);
     let face = smoothstep(0.50, 0.58, zone) * (1.0 - smoothstep(0.86, 0.94, zone))
              * smoothstep(0.15, 0.45, u.pivot.y - part.pos.y);
     let jit = vec3<f32>(hash(a_rnd * 17.1), hash(a_rnd * 29.3), hash(a_rnd * 41.7)) - 0.5;
     // loosened outward only: a grain pushed inside is hidden by the shell
     let loose = n * hash(a_rnd * 9.7) * 0.05 + jit * 0.035;
-    p = p + (loose - n * min(dot(loose, n), 0.0)) * edge * (1.0 - face);
+    if (dpc) {
+        p = p + (loose - n * min(dot(loose, n), 0.0)) * edge * (1.0 - face);
+    } else {
+        p = p + loose * edge * (1.0 - face);
+    }
 
     // the explosion throws each particle out along its own normal
     if (u.explode > 0.001) {
@@ -515,24 +533,38 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     let drift = normalize(n + vec3<f32>(hash(a_rnd * 5.1) - 0.5, 0.0, 0.8));
     p = p + flaking * drift * life * 0.7;
 
-    // The rings pass through the head as soft bands of light. They used to
-    // light only the silhouette, through each particle's own normal --
-    // which the scan's normal map makes noisy, so the band broke into a
-    // jagged edge -- and to carry grains off the outline, which tore the
-    // face. Now each is a wide, smooth band across the whole surface,
-    // brighter toward the outline, and no particle moves.
+    // The rings pass through the head. In the Depth Point Cloud each is a
+    // wide, smooth band of light across the surface and moves nothing: the
+    // thin band read through the scan's noisy normals looked jagged, and
+    // the grains it carried off the outline tore the face. Synth Cloud
+    // keeps the original: the silhouette lit, and grains carried out.
     let rc = u.meter.xy;
-    let rd = length(vec2<f32>(p.x, p.z) - rc);
+    let rel = vec2<f32>(p.x, p.z) - rc;
+    let rd = length(rel);
+    let rdir = rel / max(rd, 1e-4);
     let sil = pow(1.0 - abs(dot(n, normalize(u.eye.xyz - p))), 2.0);
     var rims = array<vec4<f32>, 3>(u.rim0, u.rim1, u.rim2);
     var rim = 0.0;
+    var carried = 0.0;
     for (var i = 0u; i < 3u; i = i + 1u) {
         let r = rims[i];
         if (r.y <= 0.001) { continue; }
-        let x = (rd - r.x) / (r.z * 2.5);
+        if (dpc) {
+            let x = (rd - r.x) / (r.z * 2.5);
+            rim = rim + exp(-x * x) * r.y;
+            continue;
+        }
+        let x = (rd - r.x) / r.z;
         rim = rim + exp(-x * x) * r.y;
+        // only once the ring has swept past it, so nothing jumps
+        if (carried == 0.0 && r.w > 0.0 && rd < r.x
+            && hash(a_rnd * 433.1 + f32(i) * 7.0) < 0.10 * r.w * sil) {
+            let out = rc + rdir * (r.x - 0.04 * hash(a_rnd * 59.3));
+            p.x = out.x;
+            p.z = out.y;
+            carried = r.y;
+        }
     }
-    let carried = 0.0;
 
     var clip = u.view_proj * vec4<f32>(p, 1.0);
 
@@ -565,8 +597,14 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     var lum = (0.012 + 0.78 * lam) * part.fade * u.bright;
     lum = lum + crest * (0.35 + 0.9 * lam);
 
-    // the rings' light: across the face, stronger toward the outline
-    lum = lum + rim * (0.3 + 0.5 * sil) * part.fade;
+    // the rings' light: in the Depth Point Cloud across the face, stronger
+    // toward the outline; in Synth Cloud on the outline, and the grains
+    // they carry
+    if (dpc) {
+        lum = lum + rim * (0.3 + 0.5 * sil) * part.fade;
+    } else {
+        lum = lum + rim * sil * 0.9 * part.fade + carried * 0.6;
+    }
     // Synth Cloud: a sheet of light sweeping the head with the LFO,
     // narrowing to a hard edge and shimmering as the filter resonates
     if (u.sheet.z > 0.001) {
@@ -582,10 +620,11 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     let tw = step(0.965, fract(a_rnd * 13.7 + u.time * 2.3));
     lum = lum + w_high * u.high * tw * lam * 1.2;            // highs glitter
 
-    // Facets: on a drum hit the head turns for a moment into a cut crystal
+    // Facet flash: on a drum hit the head turns for a moment into a cut crystal
     // -- flat-lit facets with glowing cut lines, cut afresh every hit --
     // and fades back. Only the light changes; not a particle moves.
-    let cut = select(0.0, smoothstep(0.08, 0.6, u.glitch), u.key.w > 0.5);
+    // the facet flash, its own envelope (key.w), apart from the slices
+    let cut = smoothstep(0.03, 0.7, u.key.w);
     if (cut > 0.001) {
         // Voronoi cells, so the facets are irregular like a cut gem rather
         // than a square net; a fresh set of seeds every hit
@@ -714,7 +753,8 @@ fn vs_shell(v : ShellIn) -> ShellOut {
     // depth bias between them, the shell won wherever the skin turns away
     // from the camera -- the temple, behind the eye -- and covered the
     // particles there with flat patches.
-    let inset = d.p - normalize(d.n) * 0.03;
+    // (the Depth Point Cloud only: Synth Cloud's shell stays on the surface)
+    let inset = d.p - normalize(d.n) * select(0.0, 0.03, u.look.x > 0.5);
     out.clip = u.view_proj * vec4<f32>(inset, 1.0);
     out.nrm = d.n;
     out.zone = v.zone;
@@ -723,16 +763,10 @@ fn vs_shell(v : ShellIn) -> ShellOut {
 
 @fragment
 fn fs_shell(in : ShellOut) -> @location(0) vec4<f32> {
-    // The shell fills the depth buffer, so the far side of the head stays
-    // hidden. It used to be near-black, and every gap between particles --
-    // and every slice a streak pulled aside -- showed as a black speck.
-    // Lit dimly by the same key light, it reads as shadowed skin instead.
-    // It marks the head in the alpha, like the particles.
-    let lam = pow(max(dot(normalize(in.nrm), normalize(u.key.xyz)), 0.0), 1.35);
-    let fade = clamp(in.zone * 2.4 - 0.25, 0.0, 1.0);
-    let lum = (0.012 + 0.78 * lam) * fade * u.bright * 0.32 * u.meter.z;
-    let col = vec3<f32>(lum) * mix(vec3<f32>(1.0), u.tint, u.tint_mix);
-    return vec4<f32>(max(col, vec3<f32>(0.02, 0.02, 0.04)), u.eye.w);
+    // the background colour: it exists only to fill the depth buffer, so
+    // the gaps between particles stay dark and Point size reads -- and,
+    // like the particles, to mark the head in the alpha
+    return vec4<f32>(0.02, 0.02, 0.04, u.eye.w);
 }
 
 // ─── the rings behind the head ──────────────────────────────────────────

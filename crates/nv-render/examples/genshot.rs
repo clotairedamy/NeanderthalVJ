@@ -139,10 +139,19 @@ fn main() {
     };
     // `NV_PUNCH=0.5` lunges the camera in on the beat, as the panel's slider
     params.knobs.punch = env("NV_PUNCH").unwrap_or(0.0);
-    // `NV_GLITCH=1.5` and `NV_SLICES=1` drive the drum glitch, `NV_BANDPUSH=2`
+    // `NV_GLITCH=1.5` drives the drum glitch, `NV_FACETS=1.5` the facet flash, `NV_BANDPUSH=2`
     // and `NV_BANDAXIS=1..4` the band push
     params.knobs.drum_glitch = env("NV_GLITCH").unwrap_or(params.knobs.drum_glitch);
-    params.knobs.facets = env("NV_SLICES").is_none();
+    params.knobs.facets = env("NV_FACETS").unwrap_or(0.0);
+    params.knobs.point_size = env("NV_POINT").unwrap_or(params.knobs.point_size);
+    // `NV_SYNTH=1` draws Synth Cloud: the head played by an oscillator, in
+    // its original look
+    if env("NV_SYNTH").is_some() {
+        params.knobs.synth = true;
+        params.knobs.depth_cloud = false;
+        params.knobs.facets = 0.0;
+        params.knobs.punch = 0.0;
+    }
     params.band_push = env("NV_BANDPUSH").unwrap_or(params.band_push);
     params.band_axis = env("NV_BANDAXIS").map(|a| a as u8).unwrap_or(params.band_axis);
     // `NV_FX=bloom,threshold,flash,grain,chroma,vignette,ghost` sets them all

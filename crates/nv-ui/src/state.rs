@@ -236,8 +236,9 @@ pub struct Settings {
     pub pc_effect_amount: f64,
     /// How far the camera lunges in on each beat, 0..2, in both head modes.
     pub pc_camera_punch: f64,
-    /// What the Drum glitch does: "facets" (a cut-crystal flash) or "slices".
-    pub pc_glitch_look: String,
+    /// How hard drum hits flash the head into lit facets, 0..2; the Depth
+    /// Point Cloud's own, apart from the Drum glitch.
+    pub pc_facets: f64,
 
     // hiding grid
     /// Columns; the source drawing used 40.
@@ -365,7 +366,7 @@ impl Default for Settings {
             pc_effect: "corona".into(),
             pc_effect_amount: 1.0,
             pc_camera_punch: 0.5,
-            pc_glitch_look: "facets".into(),
+            pc_facets: 0.0,
             grid_cols: 40,
             grid_noise: 7.0,
             grid_warp: 1.0,

@@ -41,7 +41,7 @@ fn every_visual_control_reaches_the_renderer() {
         ("head effect", |s| s.pc_effect = "halo".into()),
         ("effect amount", |s| s.pc_effect_amount = 1.8),
         ("camera punch", |s| s.pc_camera_punch = 1.5),
-        ("glitch look", |s| s.pc_glitch_look = "slices".into()),
+        ("facet flash", |s| s.pc_facets = 1.5),
     ];
     for (name, change) in head {
         changes_the_picture(Mode::PointCloud, name, change);
@@ -146,6 +146,26 @@ fn the_head_effect_is_the_depth_point_clouds_alone() {
     for name in nv_ui::state::PC_EFFECTS {
         assert_eq!(nv_render::HeadEffect::from_name(name).name(), name);
     }
+}
+
+#[test]
+fn synth_cloud_keeps_its_original_look() {
+    // every head change made for the Depth Point Cloud stays out of Synth
+    // Cloud, however the shared settings are set
+    let synth = Settings {
+        viz_mode: Mode::SynthCloud,
+        pc_camera_punch: 2.0,
+        pc_facets: 2.0,
+        pc_effect: "corona".into(),
+        ..Settings::default()
+    };
+    let k = params_from(&synth).knobs;
+    assert!(!k.depth_cloud);
+    assert_eq!(k.punch, 0.0);
+    assert_eq!(k.facets, 0.0, "the facet flash is the Depth Point Cloud's");
+    assert_eq!(k.effect, nv_render::HeadEffect::None);
+    let dpc = params_from(&Settings { viz_mode: Mode::PointCloud, ..synth }).knobs;
+    assert!(dpc.depth_cloud && dpc.facets > 0.0 && dpc.punch > 0.0);
 }
 
 #[test]

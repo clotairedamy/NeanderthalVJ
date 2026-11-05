@@ -60,8 +60,7 @@ fn movement_matches_the_python() {
         f.bar_phase = inp["bar_phase"].as_f64().unwrap();
 
         // the Python's own value, which the app turns down by default
-        // the Python's glitch: the slab look, which also streaks
-        let k = Knobs { drum_glitch: 1.0, facets: false, ..Knobs::default() };
+        let k = Knobs { drum_glitch: 1.0, ..Knobs::default() };
         motion.update(&f, dt, beat, k, &mut u);
 
         let got = |name: &str| -> f64 {
