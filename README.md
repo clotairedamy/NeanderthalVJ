@@ -1,37 +1,116 @@
 # NeanderthalVJ
 
-An audio-reactive visualizer and VJ tool, written in Rust. Play a track or
-plug in a live source, and the visuals follow the music frame by frame: the
-bands, the attacks, the beat and the bar. Export what you see as an
-Instagram-ready video.
+**An open-source, audio-reactive visualizer and VJ tool, written in Rust.**
+Play a track or plug in a live source, and the visuals follow the music
+frame by frame: the bass, the mids and the highs, every kick, the beat and
+the bar. Perform with it live from the keyboard or any MIDI controller, and
+export what you see as an Instagram-ready video.
 
-<p align="center"><img src="docs/generative-geometry.jpg" width="320" alt="Generative Geometry: glowing rings in a six-fold structure on a dark background"></p>
+It started life as a Python app and was rebuilt in Rust for tighter
+reactivity and performance: 420,000 particles at 120 fps, drawn on the GPU
+through Metal on a Mac and DirectX 12 on Windows, with a realtime audio
+thread that never waits on anything.
+
+<table>
+<tr>
+<td><img src="docs/corona.jpg" alt="Depth Point Cloud with the Corona effect: flares of light around a particle head"></td>
+<td><img src="docs/halo.jpg" alt="Depth Point Cloud with the Halo effect: glowing superformula rings circling the head"></td>
+<td><img src="docs/supernova.jpg" alt="Depth Point Cloud with the Supernova effect: a shell of light blasting out from the head"></td>
+</tr>
+<tr>
+<td><img src="docs/facets.jpg" alt="Depth Point Cloud with the Facet flash: the head lit as a cut crystal"></td>
+<td><img src="docs/grid.jpg" alt="Hiding Grid: a wall of squares bulging with shock waves"></td>
+<td><img src="docs/generative.jpg" alt="Generative Geometry: glowing rings in a six-fold structure"></td>
+</tr>
+</table>
 
 ## Visualizations
 
-1. **Depth Point Cloud**: a scanned head as 420,000 particles, lit by the
-   music, with rings behind it that answer the lows, and a head effect
-   around it that never touches the face: **Corona**, solar flares from
-   its outline, one band of the spectrum each; **Supernova**, a shell of
-   light blasted out on every beat and a huge one on the drop; **Orbits**,
-   three comets on knotted paths built with [nannou](https://nannou.cc);
-   **Halo**, a superformula crown behind the head; or **Vortex**, arms of
-   particles spiralling up around it. The camera can punch in on the beat.
-2. **Synth Cloud (Crave)**: the same head, played by a synth's oscillator:
-   pulse width, LFO and timbre.
-3. **Hiding Grid**: a wall of squares the music strikes, filling the
-   frame. Each kick sends a shock wave across it that bulges the lattice
-   and echoes off the edges; the mids turn the squares, the highs strike
-   sparks, beats swell every square, and it can stand the spectrum up the
-   wall like a giant analyser or lean back in perspective.
-4. **Generative Geometry**: procedural shapes that grow and mutate. A ring
-   for each band of the spectrum, bass at the centre; each band swells and
-   sharpens its own ring, beats throw polygons outward, and every bar the
-   structure evolves. Built on [nannou](https://nannou.cc)'s geometry,
-   maths and randomness.
+Press 1–4 to switch while the music plays, or let **Auto-switch** move on
+every few bars and at the drops.
 
-Number keys 1–4 switch between them while playing, or let **Auto-switch**
-move on every few bars and at the drops.
+### 1. Depth Point Cloud
+
+A scanned head as 420,000 particles, lit by the music like a spot-lit
+photograph. Rings of light open out behind it with the lows, a crest of
+light runs up it on every beat, and each kick pumps light through it.
+
+Around the head, never on the face, plays one of six **head effects**:
+
+| Effect | What it does |
+|---|---|
+| **Corona** | Solar flares grow out of the 3D head along its own surface. Each flare's length is one band of the spectrum, highs at the crown and bass down the sides, and the kick makes them all leap. |
+| **Supernova** | Every beat blasts a shell of light, the head's own shape, out past the edges of the frame; a drop sets off a huge one. |
+| **Orbits** | Three comets fly knotted 3D paths around the head, built with [nannou](https://nannou.cc)'s maths and re-shaped every bar. |
+| **Halo** | Three rings drawn with nannou's superformula circle the head in their own tilted planes, turning like a gyroscope and changing symmetry every bar. |
+| **Vortex** | Three arms of particles spiral up around the head. |
+| **None** | The plain head. |
+
+Also just for this mode:
+
+- **Facet flash**: each drum hit turns the head into a cut crystal for a
+  moment, flat-lit facets with glowing seams, cut afresh every hit. Only
+  the light changes; the shape never moves.
+- **Drum glitch**: each drum hit slices the head into offset slabs that
+  snap back.
+- **Camera punch**: the camera lunges in on every beat and eases back.
+- **Band axis and push**: lay the spectrum along the head, neck to crown,
+  face to back, ear to ear or centre out, and lift a glowing layer off each
+  region as its band plays.
+
+### 2. Synth Cloud (Crave)
+
+The same head, played by a synthesizer's oscillator instead of the beat: a
+sheet of light sweeps it with the LFO and sharpens with the filter's
+resonance, and how fast the tone changes smears the grain.
+
+### 3. Hiding Grid
+
+A wall of squares the music strikes, filling the frame. Each kick sends a
+shock wave across it that bulges the lattice and echoes off the edges; the
+mids turn the squares, the highs strike sparks, beats swell every square.
+It can stand the spectrum up the wall like a giant analyser, or lean back
+in perspective. Everything can be rewired: fire the shock waves from the
+kick, the snare, the hats or any hit, and drive the twist, the sparks and
+the warp from the lows, mids, highs or overall loudness.
+
+### 4. Generative Geometry
+
+Procedural shapes that grow and mutate, built on nannou's geometry, maths
+and randomness. A ring for each band of the spectrum, bass at the centre:
+each band swells and sharpens its own ring, hits throw polygons outward,
+and the structure evolves every bar (or every 2, 4 or 8). Choose what
+fires the polygons and what drives the spin and the shimmer, or make every
+ring pump with the bass.
+
+## Presets
+
+Eleven looks ship with the app, under **Presets** at the top of the
+controls. Pick one, then tweak it and save it under your own name.
+
+| Preset | Visualization | The look |
+|---|---|---|
+| **Synth Point Cloud** | Synth Cloud | The head played by a synth, as the app starts. |
+| **Studio Portrait** | Depth Point Cloud | Black and white, a slow orbiting camera, no effect: a portrait. |
+| **Band Lights** | Depth Point Cloud | The spectrum laid up the head in bright colour, with the Vortex. |
+| **Solar Flare** | Depth Point Cloud | The Corona in full, with a strong camera punch. |
+| **Supernova Drop** | Depth Point Cloud | Supernova shells, a hard beat flash and colour split. |
+| **Comet Head** | Depth Point Cloud | Orbits at strength, with bloom and a ghost echo. |
+| **Saint Halo** | Depth Point Cloud | The Halo in black and white. |
+| **Shock Wall** | Hiding Grid | Shock waves striking at random, the wall leaning back. |
+| **Club Analyser** | Hiding Grid | The spectrum as a giant analyser, with sparks and grain. |
+| **Neon Mandala** | Generative Geometry | Eight-fold symmetry in neon, long trails. |
+| **Bass Temple** | Generative Geometry | Four-fold and intricate, thick lines and a ghost echo. |
+
+## Colours
+
+Twenty-four palettes, with a palette kept per visualization:
+Dusk, Candy, Flamingo, Orchid, Sakura, Berry, Midnight, Coral, Lava,
+Ultraviolet, Electric, Infrared, Vaporwave, Cyberpunk, Sunset, Magma,
+Inferno, Fire, Rose, Plasma, Neon, Turbo, NSKU and black and white. Take
+the colours from any photo (drop it on the window), pick three of your
+own, or press **Shuffle colours** for a surprise. **Tint strength** sets
+how far the palette colours the head.
 
 ## Install and run
 
@@ -201,12 +280,8 @@ with what you ran and what the terminal printed.
   uses the hardware encoder when the machine has one that works.
 - **Orbit** the head by dragging the stage, or let **Auto camera** do it;
   scroll to zoom. **Performance** hides the controls.
-- **Presets**: eleven looks ship with the app, and any look can be saved
-  and reloaded. The last session comes back at the next launch.
-- **Colours**: twenty palettes (Inferno, Sunset, Ocean, Aurora, Vaporwave,
-  Cyberpunk, Fire, Ice, Acid, Gold, Rose, Forest and more), a Shuffle
-  button, a palette per mode, the colours pulled from any picture
-  (pick one or drop it on the window), or three picked by hand.
+- **Presets** and **colours**: see above. Any look can be saved and
+  reloaded, and the last session comes back at the next launch.
 - **Reactions**: the Motion tab sets how each visualization listens, on
   its own: auto level for quiet or loud masters, dynamics that lift the
   quiet parts or wait for the peaks, rise and fall times, and hits on
