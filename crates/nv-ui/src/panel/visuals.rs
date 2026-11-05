@@ -203,6 +203,8 @@ fn Colors(settings: Signal<Settings>) -> Element {
 /// The Head effect menu's wording for each effect.
 fn effect_label(name: &str) -> &'static str {
     match name {
+        "corona" => "Corona",
+        "supernova" => "Supernova",
         "orbits" => "Orbits (nannou comets)",
         "halo" => "Halo (nannou superformula)",
         "vortex" => "Vortex",
@@ -213,6 +215,15 @@ fn effect_label(name: &str) -> &'static str {
 /// What the chosen head effect does, under the menu.
 fn effect_hint(name: &str) -> &'static str {
     match name {
+        "corona" => {
+            "Solar flares erupt from the head's outline, behind it. Each flare is one band \
+             of the spectrum, highs at the crown and bass down the sides, so the corona is \
+             an analyser in fire; the kick makes every flare leap. The face is never touched."
+        }
+        "supernova" => {
+            "Every beat blasts a shell of light out from the head and past the edges of the \
+             frame, and a drop sets off a huge one. The face is never touched."
+        }
         "orbits" => {
             "Three comets circle the head on knotted paths built with nannou, re-shaped \
              every bar. The lows flare them, the mids speed them up, the beat throws them \
@@ -257,6 +268,15 @@ fn DepthPointCloud(settings: Signal<Settings>) -> Element {
                 }
                 Hint { "How strongly the head effect plays. 0 turns it off; 2 is twice the usual." }
             }
+            Slider {
+                label: "Camera punch",
+                display: format!("{:.2}", s.pc_camera_punch),
+                value: s.pc_camera_punch * 100.0,
+                min: 0.0,
+                max: 200.0,
+                onchange: move |v: f64| settings.write().pc_camera_punch = v / 100.0,
+            }
+            Hint { "The camera lunges in on every beat and eases back, throwing the head at you. The head itself never moves. 0 holds the camera still." }
             Slider {
                 label: "Point size",
                 display: format!("{:.1}", s.pc_point_size),

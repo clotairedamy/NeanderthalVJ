@@ -11,10 +11,12 @@ Instagram-ready video.
 
 1. **Depth Point Cloud**: a scanned head as 420,000 particles, lit by the
    music, with rings behind it that answer the lows, and a head effect
-   around it that never touches the face: **Orbits**, three comets on
-   knotted paths built with [nannou](https://nannou.cc); **Halo**, a
-   superformula crown behind the head that changes symmetry every bar; or
-   **Vortex**, arms of particles spiralling up around it.
+   around it that never touches the face: **Corona**, solar flares from
+   its outline, one band of the spectrum each; **Supernova**, a shell of
+   light blasted out on every beat and a huge one on the drop; **Orbits**,
+   three comets on knotted paths built with [nannou](https://nannou.cc);
+   **Halo**, a superformula crown behind the head; or **Vortex**, arms of
+   particles spiralling up around it. The camera can punch in on the beat.
 2. **Synth Cloud (Crave)**: the same head, played by a synth's oscillator:
    pulse width, LFO and timbre.
 3. **Hiding Grid**: a wall of squares the music strikes, filling the
@@ -199,7 +201,7 @@ with what you ran and what the terminal printed.
   uses the hardware encoder when the machine has one that works.
 - **Orbit** the head by dragging the stage, or let **Auto camera** do it;
   scroll to zoom. **Performance** hides the controls.
-- **Presets**: nine looks ship with the app, and any look can be saved
+- **Presets**: eleven looks ship with the app, and any look can be saved
   and reloaded. The last session comes back at the next launch.
 - **Colours**: a palette per mode, the colours pulled from any picture
   (pick one or drop it on the window), or three picked by hand.

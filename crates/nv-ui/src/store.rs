@@ -107,6 +107,38 @@ pub fn factory() -> Vec<(&'static str, Settings)> {
             },
         ),
         (
+            "Solar Flare",
+            Settings {
+                viz_mode: Mode::PointCloud,
+                palette_per_mode: false,
+                palette: "plasma".into(),
+                pc_effect: "corona".into(),
+                pc_effect_amount: 1.3,
+                pc_camera_punch: 0.8,
+                tint_strength: 0.85,
+                fx_bloom: 0.6,
+                fx_threshold: 0.55,
+                fx_vignette: 0.5,
+                ..d()
+            },
+        ),
+        (
+            "Supernova Drop",
+            Settings {
+                viz_mode: Mode::PointCloud,
+                palette_per_mode: false,
+                palette: "neon".into(),
+                pc_effect: "supernova".into(),
+                pc_effect_amount: 1.4,
+                pc_camera_punch: 1.0,
+                tint_strength: 0.7,
+                fx_bloom: 0.5,
+                fx_flash: 1.1,
+                fx_chroma: 0.6,
+                ..d()
+            },
+        ),
+        (
             "Comet Head",
             Settings {
                 viz_mode: Mode::PointCloud,
@@ -227,6 +259,22 @@ mod tests {
         save_presets(&presets).unwrap();
         assert_eq!(load_presets()["Mine"].gen_symmetry, 9);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_factory_presets_use_palettes_and_effects_that_exist() {
+        for (name, look) in factory() {
+            assert!(
+                crate::state::PALETTES.contains(&look.palette.as_str()),
+                "{name}: {}",
+                look.palette
+            );
+            assert!(
+                crate::state::PC_EFFECTS.contains(&look.pc_effect.as_str()),
+                "{name}: {}",
+                look.pc_effect
+            );
+        }
     }
 
     #[test]

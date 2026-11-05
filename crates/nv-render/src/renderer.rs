@@ -61,8 +61,10 @@ pub struct Uniforms {
     pub fx2: [f32; 4],
     /// The effects' paths: the comets' ratios and clocks (0..3) and phases
     /// (3..6), the head's centre and the comets' lift (6), its radii and
-    /// the tail's reach (7), the halo (8) and the vortex (9).
-    pub paths: [[f32; 4]; 10],
+    /// the tail's reach (7), the halo (8), the vortex (9), the supernova's
+    /// shells as (radius, strength) pairs (10, 11) and the seven bands for
+    /// the corona (12, 13).
+    pub paths: [[f32; 4]; 14],
 }
 
 /// How far the rings are scaled out from their own units into the world.
@@ -105,7 +107,7 @@ impl Default for Uniforms {
             rims: [[0.0; 4]; 3],
             fx: [0.0; 4],
             fx2: [0.0; 4],
-            paths: [[0.0; 4]; 10],
+            paths: [[0.0; 4]; 14],
         }
     }
 }

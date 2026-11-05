@@ -130,12 +130,12 @@ impl Scene {
         let frame = &shaped;
         let knobs = params.knobs;
         self.motion.update(frame, dt, beat, knobs, &mut self.uniforms);
-        // only the head has a head effect
-        let effect = if params.grid.is_none() && params.generative.is_none() {
-            knobs.effect
-        } else {
-            crate::head_fx::HeadEffect::None
-        };
+        // only the head has a head effect, and a camera to punch
+        let head = params.grid.is_none() && params.generative.is_none();
+        if self.motion.dropped() {
+            self.head_fx.drop_in();
+        }
+        let effect = if head { knobs.effect } else { crate::head_fx::HeadEffect::None };
         self.head_fx.update(
             frame,
             dt,
@@ -165,6 +165,14 @@ impl Scene {
         // the camera frames the stage, not the target, through the lens
         // the Perspective control chose
         let aspect = self.renderer.aspect();
+        // the camera lunges in on the beat and eases back: the head is
+        // thrown at the viewer without a particle of it moving
+        let camera = if head && knobs.punch > 0.0 {
+            let lunge = 0.16 * knobs.punch.min(2.0) * self.head_fx.kick().min(1.6);
+            Camera { distance: camera.distance * (1.0 - lunge.min(0.45)), ..camera }
+        } else {
+            camera
+        };
         let (camera, fov) = lens(camera, params.perspective);
         self.uniforms.view_proj = view_proj_lens(aspect, camera, fov).to_cols_array_2d();
         self.uniforms.eye = camera_eye(camera).extend(1.0).to_array();

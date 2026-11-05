@@ -64,6 +64,8 @@ pub struct Knobs {
     /// (`pc_effect`, `pc_effect_amount`). None for Synth Cloud.
     pub effect: crate::head_fx::HeadEffect,
     pub effect_amount: f32,
+    /// How far the camera lunges in on each beat (`pc_camera_punch`).
+    pub punch: f32,
 }
 
 impl Default for Knobs {
@@ -86,6 +88,7 @@ impl Default for Knobs {
             ring_band: 0,
             effect: crate::head_fx::HeadEffect::None,
             effect_amount: 1.0,
+            punch: 0.0,
         }
     }
 }

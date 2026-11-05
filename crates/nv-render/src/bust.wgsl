@@ -63,7 +63,7 @@ struct Uniforms {
     // amount, the beat, time), (lows, mids, highs, alive) and its paths
     fx        : vec4<f32>,
     fx2       : vec4<f32>,
-    paths     : array<vec4<f32>, 10>,
+    paths     : array<vec4<f32>, 14>,
 };
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
@@ -206,6 +206,16 @@ fn superformula(th : f32, m : f32, n1 : f32, n2 : f32) -> f32 {
     return pow(max(a + b, 1e-4), -1.0 / n1);
 }
 
+/// One of the seven bands, as the corona reads them.
+fn band_level(i : i32) -> f32 {
+    let v = select(u.paths[13], u.paths[12], i < 4);
+    let k = i % 4;
+    if (k == 0) { return v.x; }
+    if (k == 1) { return v.y; }
+    if (k == 2) { return v.z; }
+    return v.w;
+}
+
 /// 1 well clear of the face, 0 in front of it: how much of a borrowed
 /// particle may be drawn where it is.
 fn clear_of_face(p : vec3<f32>) -> f32 {
@@ -288,6 +298,55 @@ fn effect_dot(rnd : f32) -> vec4<f32> {
         p = vec3<f32>(c.x + cos(a) * rad * radii.x, c.y + sin(a) * rad * radii.y, z) + j * 0.012;
         // fading in at the bottom and out at the top
         light = (0.35 + 0.8 * mids + 0.6 * kick) * sin(3.14159 * f);
+    } else if (which == 4) {
+        // Corona: flares from the outline, behind the head. Most of the
+        // hidden particles go into it, so it burns dense.
+        if (pick > 0.6) { return vec4<f32>(0.0); }
+        let toward = normalize(u.eye.xyz - c);
+        let side = normalize(cross(toward, vec3<f32>(0.0, 0.0, 1.0)));
+        let up = cross(side, toward);
+        // the angle round the outline, 0 at the crown; mirrored, so both
+        // sides of the head answer the same band
+        let th = (hash(rnd * 17.9) * 2.0 - 1.0) * 3.14159;
+        let from_top = abs(th) / 3.14159;
+        // highs at the crown, the bass down the sides
+        let slot = (1.0 - from_top) * 6.0;
+        let bi = i32(floor(slot));
+        let fr = slot - f32(bi);
+        let level = mix(band_level(bi), band_level(min(bi + 1, 6)), fr);
+        // each flare is a tongue: thin, wavering, a little different from
+        // its neighbours
+        let tongue = floor(th * 22.0);
+        let jag = 0.6 + 0.8 * hash(tongue * 7.3 + floor(time * 6.0) * 0.37);
+        let len = (0.12 + 1.9 * level * jag + 1.1 * kick) * amount;
+        // more particles near the root, where the fire is hottest
+        let s = pow(hash(rnd * 59.7), 1.6);
+        let wave = sin(s * 9.0 - time * 7.0 + tongue) * 0.05 * s;
+        let a = th + wave;
+        let dir = side * sin(a) + up * cos(a);
+        // the outline, as seen from the camera
+        let rim = length(vec2<f32>(sin(a) * radii.x, cos(a) * radii.z));
+        p = c - toward * 0.3 + dir * (rim * 1.02 + s * len) + j * 0.01 * (1.0 + 3.0 * s);
+        light = (0.15 + 0.9 * (1.0 - s)) * (0.4 + 0.8 * level + 0.3 * kick);
+        // the highs make the tips spit sparks
+        light = light * (1.0 + 2.5 * highs * s * step(0.94, fract(rnd * 13.1 + time * 4.3)));
+    } else if (which == 5) {
+        // Supernova: shells of light blasted out from the head
+        let k = i32(min(hash(rnd * 41.3) * 4.0, 3.0));
+        let pair = u.paths[10 + k / 2];
+        var shell = pair.xy;
+        if (k % 2 == 1) { shell = pair.zw; }
+        if (shell.y <= 0.02 || pick > 0.5) { return vec4<f32>(0.0); }
+        // a direction on the sphere
+        let zz = hash(rnd * 7.1) * 2.0 - 1.0;
+        let ph = hash(rnd * 19.7) * TAU;
+        let dir = vec3<f32>(sqrt(1.0 - zz * zz) * cos(ph), sqrt(1.0 - zz * zz) * sin(ph), zz);
+        // a shell with depth: the leading edge brightest, a wake behind it
+        let lag = pow(hash(rnd * 61.3), 3.0) * 0.18 * shell.x;
+        let r = 1.05 + shell.x - lag;
+        p = c + dir * radii * r;
+        let edge = 1.0 - lag / max(0.18 * shell.x, 1e-3);
+        light = shell.y * (0.3 + 1.3 * edge) * (1.0 - shell.x / 6.0);
     } else {
         return vec4<f32>(0.0);
     }

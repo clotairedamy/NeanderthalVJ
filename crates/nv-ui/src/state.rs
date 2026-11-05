@@ -97,7 +97,7 @@ impl Default for Reaction {
 }
 
 /// The Depth Point Cloud's head effects, as `nv_render::HeadEffect` names them.
-pub const PC_EFFECTS: [&str; 4] = ["none", "orbits", "halo", "vortex"];
+pub const PC_EFFECTS: [&str; 6] = ["none", "corona", "supernova", "orbits", "halo", "vortex"];
 pub const GRID_IMPACTS: [&str; 4] = ["centre", "scattered", "floor", "sides"];
 
 /// Which panel the left column is showing.
@@ -213,6 +213,8 @@ pub struct Settings {
     /// strongly it plays, 0..2. Synth Cloud has none.
     pub pc_effect: String,
     pub pc_effect_amount: f64,
+    /// How far the camera lunges in on each beat, 0..2, in both head modes.
+    pub pc_camera_punch: f64,
 
     // hiding grid
     /// Columns; the source drawing used 40.
@@ -336,9 +338,10 @@ impl Default for Settings {
             pc_high_gain: 1.0,
             pc_ring_band: "lows".into(),
             // the head effect is what sets the Depth Point Cloud apart from
-            // Synth Cloud, so it starts on, with the nannou comets
-            pc_effect: "orbits".into(),
+            // Synth Cloud, so it starts on, with the most dramatic one
+            pc_effect: "corona".into(),
             pc_effect_amount: 1.0,
+            pc_camera_punch: 0.5,
             grid_cols: 40,
             grid_noise: 7.0,
             grid_warp: 1.0,

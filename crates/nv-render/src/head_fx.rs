@@ -20,6 +20,12 @@
 //!   with the mids, and each beat sends a ring out from it.
 //! - **Vortex** -- three arms of particles spiral up around the head,
 //!   faster with the mids, wider with the bass, flashing on the beat.
+//! - **Corona** -- solar flares erupt from the head's outline, behind it.
+//!   Each flare's length is one band of the spectrum, highs at the crown
+//!   and bass down the sides, so the corona is an analyser in fire; the
+//!   kick makes every flare leap.
+//! - **Supernova** -- every beat blasts a shell of light out from the head
+//!   and past the edges of the frame, and a drop sets off a huge one.
 //!
 //! The paths are worked out here once a frame and handed to the particle
 //! shader as uniforms (`Uniforms::fx`, `fx2`, `paths`); the shader places
@@ -45,11 +51,19 @@ pub enum HeadEffect {
     Orbits,
     Halo,
     Vortex,
+    Corona,
+    Supernova,
 }
 
 impl HeadEffect {
-    pub const ALL: [HeadEffect; 4] =
-        [HeadEffect::None, HeadEffect::Orbits, HeadEffect::Halo, HeadEffect::Vortex];
+    pub const ALL: [HeadEffect; 6] = [
+        HeadEffect::None,
+        HeadEffect::Orbits,
+        HeadEffect::Halo,
+        HeadEffect::Vortex,
+        HeadEffect::Corona,
+        HeadEffect::Supernova,
+    ];
 
     /// The name settings and presets store it by.
     pub fn name(self) -> &'static str {
@@ -58,6 +72,8 @@ impl HeadEffect {
             HeadEffect::Orbits => "orbits",
             HeadEffect::Halo => "halo",
             HeadEffect::Vortex => "vortex",
+            HeadEffect::Corona => "corona",
+            HeadEffect::Supernova => "supernova",
         }
     }
 
@@ -80,6 +96,12 @@ const TAIL: f32 = 0.9;
 /// How far out the comets fly, in head radii: wide enough that they circle
 /// the head rather than skim it.
 const LIFT: f32 = 1.45;
+/// Supernova shells in flight at once. The shader reads exactly this many.
+pub const SHELLS: usize = 4;
+/// How far a shell travels before it is gone, in head radii past the
+/// surface: well past the edges of the frame.
+const SHELL_REACH: f32 = 6.0;
+
 /// The halo's symmetries, one picked each bar.
 const SYMMETRIES: [f32; 6] = [3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
@@ -170,6 +192,12 @@ pub struct HeadFx {
     /// The vortex: how far round it has turned, and how far it has risen.
     swirl: f32,
     rise: f32,
+    /// Every band, smoothed: quick to flare, slower to die down.
+    bands: [f32; 7],
+    /// Supernova shells: `(radius past the surface, strength)`.
+    shells: Vec<(f32, f32)>,
+    /// A drop came in since the last update.
+    drop: bool,
 }
 
 impl Default for HeadFx {
@@ -212,6 +240,9 @@ impl HeadFx {
             spin: 0.0,
             swirl: 0.0,
             rise: 0.0,
+            bands: [0.0; 7],
+            shells: Vec::with_capacity(SHELLS),
+            drop: false,
         }
     }
 
@@ -234,6 +265,22 @@ impl HeadFx {
             comet_at(&self.shape, c.ratio, c.phase, c.angle - back, self.lift())
         };
         (std::array::from_fn(|i| at(i, 0.0)), std::array::from_fn(|i| at(i, TAIL)))
+    }
+
+    /// The beat, as it falls away: for the camera's punch.
+    pub fn kick(&self) -> f32 {
+        self.kick
+    }
+
+    /// The music came back in after a breakdown: the next update sets off
+    /// the big supernova.
+    pub fn drop_in(&mut self) {
+        self.drop = true;
+    }
+
+    /// The supernova shells in flight: `(radius, strength)`.
+    pub fn shells(&self) -> &[(f32, f32)] {
+        &self.shells
     }
 
     /// The halo's symmetry right now.
@@ -273,10 +320,28 @@ impl HeadFx {
         let new_bar = bar + 0.5 < self.last_bar;
         self.last_bar = bar;
 
+        for (b, level) in self.bands.iter_mut().zip(frame.bands) {
+            let target = (level as f32).min(1.5);
+            let rate = if target > *b { 20.0 } else { 4.0 };
+            approach(b, target, dt, rate);
+        }
+
         if beat && frame.beat_strength > 0.2 {
-            self.kick = self.kick.max((frame.beat_strength as f32).max(0.6));
+            let hit = (frame.beat_strength as f32).max(0.6);
+            self.kick = self.kick.max(hit);
+            self.shell(0.55 + 0.6 * hit);
+        }
+        if std::mem::take(&mut self.drop) {
+            // the drop: the biggest blast, and the flares leap with it
+            self.shell(2.2);
+            self.kick = 1.6;
         }
         self.kick *= (-dt * 5.0).exp();
+        for sh in &mut self.shells {
+            sh.0 += dt * (1.8 + 1.4 * sh.1);
+            sh.1 *= (-dt * 1.1).exp();
+        }
+        self.shells.retain(|sh| sh.1 > 0.02 && sh.0 < SHELL_REACH);
 
         // every bar the comets' paths and the halo's symmetry change
         if new_bar {
@@ -302,10 +367,18 @@ impl HeadFx {
         self.write(effect, amount, u);
     }
 
+    /// Set off a supernova shell, the oldest giving way.
+    fn shell(&mut self, strength: f32) {
+        if self.shells.len() == SHELLS {
+            self.shells.remove(0);
+        }
+        self.shells.push((0.0, strength));
+    }
+
     fn write(&self, effect: HeadEffect, amount: f32, u: &mut Uniforms) {
         u.fx = [0.0; 4];
         u.fx2 = [0.0; 4];
-        u.paths = [[0.0; 4]; 10];
+        u.paths = [[0.0; 4]; 14];
         if effect == HeadEffect::None || amount <= 0.0 {
             return;
         }
@@ -320,6 +393,13 @@ impl HeadFx {
         u.paths[7] = self.shape.radii.extend(TAIL).to_array();
         u.paths[8] = [self.sym_from, self.sym_to, self.sym_blend, self.spin];
         u.paths[9] = [self.swirl, self.rise, 0.0, 0.0];
+        for (i, sh) in self.shells.iter().enumerate() {
+            u.paths[10 + i / 2][(i % 2) * 2] = sh.0;
+            u.paths[10 + i / 2][(i % 2) * 2 + 1] = sh.1;
+        }
+        let b = self.bands;
+        u.paths[12] = [b[0], b[1], b[2], b[3]];
+        u.paths[13] = [b[4], b[5], b[6], 0.0];
     }
 }
 
@@ -422,7 +502,7 @@ mod tests {
         assert_eq!(u.fx, [0.0; 4]);
         fx.update(&frame(1.0), 1.0 / 60.0, true, HeadEffect::Vortex, 0.0, 1.0, 1.0, &mut u);
         assert_eq!(u.fx, [0.0; 4]);
-        assert_eq!(u.paths, [[0.0; 4]; 10]);
+        assert_eq!(u.paths, [[0.0; 4]; 14]);
     }
 
     #[test]
@@ -432,6 +512,48 @@ mod tests {
             .skip(1)
             .map(|e| run(&mut HeadFx::default(), &frame(0.5), e, 1).fx[0])
             .collect();
-        assert_eq!(ids, vec![1.0, 2.0, 3.0]);
+        assert_eq!(ids, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+    }
+
+    #[test]
+    fn a_beat_sets_off_a_shell_that_flies_out_and_fades() {
+        let mut fx = HeadFx::default();
+        let mut u = Uniforms::default();
+        fx.update(&frame(0.6), 1.0 / 60.0, true, HeadEffect::Supernova, 1.0, 1.0, 1.0, &mut u);
+        assert_eq!(fx.shells().len(), 1);
+        assert!(u.paths[10][1] > 0.5, "the shader was given no shell");
+        for _ in 0..60 {
+            fx.update(&frame(0.6), 1.0 / 60.0, false, HeadEffect::Supernova, 1.0, 1.0, 1.0, &mut u);
+        }
+        let (r, s) = fx.shells()[0];
+        assert!(r > 1.5, "the shell did not fly out: {r}");
+        assert!(s < 0.6, "the shell did not fade: {s}");
+        for _ in 0..400 {
+            fx.update(&frame(0.6), 1.0 / 60.0, false, HeadEffect::Supernova, 1.0, 1.0, 1.0, &mut u);
+        }
+        assert!(fx.shells().is_empty(), "a shell never left");
+    }
+
+    #[test]
+    fn a_drop_sets_off_the_biggest_blast() {
+        let mut fx = HeadFx::default();
+        let mut u = Uniforms::default();
+        fx.update(&frame(0.6), 1.0 / 60.0, true, HeadEffect::Supernova, 1.0, 1.0, 1.0, &mut u);
+        let beat = fx.shells()[0].1;
+        fx.drop_in();
+        fx.update(&frame(0.6), 1.0 / 60.0, false, HeadEffect::Supernova, 1.0, 1.0, 1.0, &mut u);
+        let drop = fx.shells().last().unwrap().1;
+        assert!(drop > beat * 1.5, "the drop was no bigger than a beat");
+        assert!(fx.kick() > 1.0);
+    }
+
+    #[test]
+    fn the_corona_flares_with_each_band() {
+        let mut fx = HeadFx::default();
+        let mut f = frame(0.0);
+        f.bands[6] = 1.0;
+        let u = run(&mut fx, &f, HeadEffect::Corona, 30);
+        assert!(u.paths[13][2] > 0.8, "the highs did not reach the corona");
+        assert!(u.paths[12][0] < 0.05, "a silent band flared");
     }
 }
