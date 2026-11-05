@@ -113,11 +113,15 @@ fn main() {
         _ => Params { generative: Some(GenKnobs::default()), post, ..Default::default() },
     };
 
+    // `NV_AZIMUTH=90` looks from the side, in degrees, as dragging would
+    let azimuth: f32 = std::env::var("NV_AZIMUTH").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0);
+    let camera = Camera { azimuth: azimuth.to_radians(), ..Camera::default() };
+
     let dt = 1.0 / 60.0;
     let frames = (seconds / dt) as u32;
     for i in 0..frames {
         let (f, beat) = music(i as f32 * dt);
-        scene.render(&device, &queue, &view, &f, beat, dt, &params, Camera::default());
+        scene.render(&device, &queue, &view, &f, beat, dt, &params, camera);
     }
 
     let row = w * 4;

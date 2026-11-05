@@ -100,6 +100,7 @@ struct Sprite {
 @group(1) @binding(1) var<storage, read> sprites : array<Sprite>;
 
 fn hash(n : f32) -> f32 { return fract(sin(n) * 43758.5453123); }
+fn hash3(c : vec3<f32>) -> f32 { return hash(dot(c, vec3<f32>(1.0, 57.0, 113.0))); }
 
 fn rot_z(a : f32) -> mat3x3<f32> {
     let c = cos(a); let s = sin(a);
@@ -233,9 +234,28 @@ fn clear_of_face(p : vec3<f32>) -> f32 {
     return smoothstep(1.05, 1.35, length(q));
 }
 
+/// Whether `p` lies behind the head as the camera sees it, where the head
+/// would hide it: such a particle is not drawn at all, rather than drawn
+/// and then covered.
+fn hidden_by_head(p : vec3<f32>) -> bool {
+    let c = u.paths[6].xyz;
+    let radii = u.paths[7].xyz;
+    let toward = normalize(u.eye.xyz - c);
+    let v = p - c;
+    if (dot(v, toward) > 0.0) { return false; }
+    let side = normalize(cross(toward, vec3<f32>(0.0, 0.0, 1.0)));
+    let up = cross(side, toward);
+    let q = vec2<f32>(dot(v, side) / radii.x, dot(v, up) / radii.z);
+    // a little inside the outline, so nothing at the edge is lost
+    return length(q) < 0.85;
+}
+
 /// A borrowed particle: where it goes and how bright it is. Brightness 0
 /// leaves the particle where it was.
-fn effect_dot(rnd : f32) -> vec4<f32> {
+/// `surf` and `n` are where the borrowed particle sits on the head, and
+/// its normal; `rest` is that point before the head moved, and `zone` its
+/// height.
+fn effect_dot(rnd : f32, surf : vec3<f32>, n : vec3<f32>, rest : vec3<f32>, zone : f32) -> vec4<f32> {
     let which = i32(u.fx.x + 0.5);
     let amount = u.fx.y;
     let kick = u.fx.z;
@@ -299,54 +319,65 @@ fn effect_dot(rnd : f32) -> vec4<f32> {
         // fading in at the bottom and out at the top
         light = (0.35 + 0.8 * mids + 0.6 * kick) * sin(3.14159 * f);
     } else if (which == 4) {
-        // Corona: flares from the outline, behind the head. Most of the
-        // hidden particles go into it, so it burns dense.
-        if (pick > 0.6) { return vec4<f32>(0.0); }
-        let toward = normalize(u.eye.xyz - c);
-        let side = normalize(cross(toward, vec3<f32>(0.0, 0.0, 1.0)));
-        let up = cross(side, toward);
-        // the angle round the outline, 0 at the crown; mirrored, so both
-        // sides of the head answer the same band
-        let th = (hash(rnd * 17.9) * 2.0 - 1.0) * 3.14159;
-        let from_top = abs(th) / 3.14159;
-        // highs at the crown, the bass down the sides
-        let slot = (1.0 - from_top) * 6.0;
+        // Corona: flares grow out of the head itself. Each borrowed
+        // particle is a point on the far side of the skull; its flare
+        // leaves along that point's own normal, so the fire follows the
+        // real shape of the head and turns with it. Seen from the front,
+        // only the flares leaving past the outline show -- a corona.
+        if (pick > 0.9 || zone < 0.42) { return vec4<f32>(0.0); }
+        // the spectrum up the head: bass at the neck, highs at the crown
+        let slot = clamp((zone - 0.42) / 0.58, 0.0, 1.0) * 6.0;
         let bi = i32(floor(slot));
-        let fr = slot - f32(bi);
-        let level = mix(band_level(bi), band_level(min(bi + 1, 6)), fr);
-        // each flare is a tongue: thin, wavering, a little different from
-        // its neighbours
-        let tongue = floor(th * 22.0);
-        let jag = 0.6 + 0.8 * hash(tongue * 7.3 + floor(time * 6.0) * 0.37);
-        let len = (0.12 + 1.9 * level * jag + 1.1 * kick) * amount;
-        // more particles near the root, where the fire is hottest
+        let level = mix(band_level(bi), band_level(min(bi + 1, 6)), slot - f32(bi));
+        // particles from the same patch of skull make one tongue of fire,
+        // which is what makes flames rather than fuzz
+        let piece = floor(rest * 7.0);
+        let tongue = hash3(piece);
+        let jag = 0.5 + 0.9 * hash(tongue * 91.7 + floor(time * 6.0) * 0.37);
+        let len = (0.15 + 1.8 * level * jag + 1.0 * kick) * amount;
+        let lean = vec3<f32>(hash(tongue * 3.1), hash(tongue * 5.3), hash(tongue * 7.9)) - 0.5;
+        // out from the head as the camera sees it, as well as along the
+        // skull's own normal: a flare from the back of the head fans out
+        // past the outline instead of hiding straight behind it
+        let toward = normalize(u.eye.xyz - c);
+        let off = surf - c;
+        let fan = normalize(off - toward * dot(off, toward) + vec3<f32>(0.0, 0.0, 1e-3));
+        var dir = normalize(n * 0.6 + fan * 1.1 + vec3<f32>(0.0, 0.0, 0.35) + lean * 0.45);
+        // never toward the camera: from the far side of the head, that
+        // keeps every flare behind the face
+        dir = normalize(dir - toward * max(dot(dir, toward), 0.0) + vec3<f32>(0.0, 0.0, 1e-4));
+        // more of it near the root, where the fire is hottest, and a sway
+        // that runs up each tongue
         let s = pow(hash(rnd * 59.7), 1.6);
-        let wave = sin(s * 9.0 - time * 7.0 + tongue) * 0.05 * s;
-        let a = th + wave;
-        let dir = side * sin(a) + up * cos(a);
-        // the outline, as seen from the camera
-        let rim = length(vec2<f32>(sin(a) * radii.x, cos(a) * radii.z));
-        p = c - toward * 0.3 + dir * (rim * 1.02 + s * len) + j * 0.01 * (1.0 + 3.0 * s);
-        light = (0.15 + 0.9 * (1.0 - s)) * (0.4 + 0.8 * level + 0.3 * kick);
+        let sway = normalize(cross(dir, vec3<f32>(0.0, 0.0, 1.0)) + vec3<f32>(1e-4, 0.0, 0.0));
+        // each tongue narrows to a point: its particles close in on the
+        // middle of their patch as they rise
+        let taper = (rest - (piece + 0.5) / 7.0) * min(s * 1.6, 0.92);
+        p = surf - taper + dir * s * len
+          + sway * sin(s * 8.0 - time * 7.0 + tongue * 20.0) * 0.06 * s
+          + j * 0.006;
+        light = (0.3 + 0.9 * (1.0 - s)) * (0.4 + 0.8 * level + 0.3 * kick);
         // the highs make the tips spit sparks
         light = light * (1.0 + 2.5 * highs * s * step(0.94, fract(rnd * 13.1 + time * 4.3)));
+        // it starts on the far side and only moves away from the camera,
+        // so the head's own shell hides whatever lies behind the face
+        if (hidden_by_head(p)) { return vec4<f32>(p, -1.0); }
+        return vec4<f32>(p, light * amount * alive);
     } else if (which == 5) {
-        // Supernova: shells of light blasted out from the head
+        // Supernova: shells of light blasted out from the head, each the
+        // head's own shape inflating from its surface
+        if (zone < 0.42) { return vec4<f32>(0.0); }
         let k = i32(min(hash(rnd * 41.3) * 4.0, 3.0));
         let pair = u.paths[10 + k / 2];
         var shell = pair.xy;
         if (k % 2 == 1) { shell = pair.zw; }
-        if (shell.y <= 0.02 || pick > 0.5) { return vec4<f32>(0.0); }
-        // a direction on the sphere
-        let zz = hash(rnd * 7.1) * 2.0 - 1.0;
-        let ph = hash(rnd * 19.7) * TAU;
-        let dir = vec3<f32>(sqrt(1.0 - zz * zz) * cos(ph), sqrt(1.0 - zz * zz) * sin(ph), zz);
+        if (shell.y <= 0.02 || pick > 0.6) { return vec4<f32>(0.0); }
         // a shell with depth: the leading edge brightest, a wake behind it
         let lag = pow(hash(rnd * 61.3), 3.0) * 0.18 * shell.x;
-        let r = 1.05 + shell.x - lag;
-        p = c + dir * radii * r;
+        p = c + (surf - c) * (1.02 + shell.x - lag) + j * 0.01;
         let edge = 1.0 - lag / max(0.18 * shell.x, 1e-3);
         light = shell.y * (0.3 + 1.3 * edge) * (1.0 - shell.x / 6.0);
+        if (hidden_by_head(p)) { return vec4<f32>(p, -1.0); }
     } else {
         return vec4<f32>(0.0);
     }
@@ -396,7 +427,7 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     // far side of the head, behind the shell. The face's own particles go
     // on below exactly as they would without it.
     if (u.fx.x > 0.5 && dot(n, normalize(u.eye.xyz - p)) < -0.4) {
-        let e = effect_dot(a_rnd);
+        let e = effect_dot(a_rnd, p, n, part.pos, zone);
         if (e.w != 0.0) {
             sprites_out[pi] = effect_sprite(e.xyz, max(e.w, 0.0), a_rnd);
             return;
