@@ -24,6 +24,12 @@ thread that never waits on anything.
 </tr>
 </table>
 
+<p align="center"><img src="docs/interface.jpg" alt="The NeanderthalVJ window: presets and controls on the left, the visualization on the right, with the transport and spectrum below"></p>
+
+The controls sit on the left, with a line under each saying what it does;
+the visualization fills the right, with the spectrum and the transport
+below it. **Performance** (or P) hides everything but the picture.
+
 ## Visualizations
 
 Press 1–4 to switch while the music plays, or let **Auto-switch** move on
