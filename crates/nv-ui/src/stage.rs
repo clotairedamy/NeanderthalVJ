@@ -98,6 +98,14 @@ pub fn palette_stops(g: &Settings) -> Vec<[f32; 3]> {
     }
 }
 
+/// A number that differs from call to call, for picking at random.
+pub fn seed_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.subsec_nanos() as u64 ^ d.as_secs())
+        .unwrap_or(0)
+}
+
 /// How fast the camera turns on its own, in radians a second.
 pub fn orbit_rate(g: &Settings) -> f32 {
     if g.auto_camera {

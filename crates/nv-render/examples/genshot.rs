@@ -113,6 +113,20 @@ fn main() {
         _ => Params { generative: Some(GenKnobs::default()), post, ..Default::default() },
     };
 
+    // `NV_PALETTE=sunset` colours it as the app would with that palette
+    let mut params = params;
+    if let Ok(name) = std::env::var("NV_PALETTE") {
+        let at = |t: f32| nv_render::palette::sample(&name, t);
+        params.knobs.tint = at(0.62);
+        params.knobs.tint_mix = 0.75;
+        if let Some(g) = params.grid.as_mut() {
+            g.colors = [at(0.15), at(0.55), at(0.95)];
+        }
+        if let Some(g) = params.generative.as_mut() {
+            g.colors = [0.0, 0.25, 0.5, 0.75, 1.0].map(at);
+        }
+    }
+
     // `NV_AZIMUTH=90` looks from the side, in degrees, as dragging would
     let azimuth: f32 = std::env::var("NV_AZIMUTH").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0);
     let camera = Camera { azimuth: azimuth.to_radians(), ..Camera::default() };

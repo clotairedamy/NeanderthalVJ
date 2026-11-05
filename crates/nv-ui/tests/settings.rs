@@ -186,3 +186,12 @@ fn the_other_settings_have_a_home() {
     ];
     assert!(homes.iter().all(|(names, home)| !names.is_empty() && !home.is_empty()));
 }
+
+#[test]
+fn shuffle_always_changes_the_palette_to_a_real_one() {
+    for seed in 0..200 {
+        let next = nv_ui::panel::visuals::shuffled_palette("plasma", seed);
+        assert_ne!(next, "plasma");
+        assert!(!matches!(next, "image" | "custom"));
+    }
+}

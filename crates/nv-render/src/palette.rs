@@ -34,6 +34,58 @@ pub fn stops(name: &str) -> Vec<[f32; 3]> {
         "neon" => {
             [0x00_F5_FF, 0x7A_2B_FF, 0xFF_2B_8A, 0xFF_E5_3B].iter().map(|h| srgb(*h)).collect()
         }
+        "inferno" => [0x00_00_04, 0x42_0A_68, 0x93_26_67, 0xDD_51_3A, 0xFC_A5_0A, 0xFC_FF_A4]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "magma" => [0x00_00_04, 0x3B_0F_70, 0x8C_29_81, 0xDE_49_68, 0xFE_9F_6D, 0xFC_FD_BF]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "sunset" => [0x2D_1B_69, 0x7B_2D_8E, 0xE8_3F_6F, 0xFF_8A_5B, 0xFF_D1_66]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "ocean" => [0x03_04_5E, 0x00_77_B6, 0x00_B4_D8, 0x90_E0_EF, 0xCA_F0_F8]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "aurora" => [0x0B_13_2B, 0x3A_0C_A3, 0x1B_99_8B, 0x2D_E1_C2, 0xC6_F9_1F]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "vaporwave" => [0x1A_0B_3D, 0xB9_67_FF, 0xFF_71_CE, 0x01_CD_FE, 0xFF_FB_96]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "cyberpunk" => [0x0D_02_21, 0x65_0D_89, 0xF7_06_CF, 0x2D_E2_E6, 0xF9_C8_0E]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "fire" => [0x1A_00_00, 0x7F_00_00, 0xE0_3C_00, 0xFF_8C_00, 0xFF_E0_66]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "ice" => [0x0A_11_28, 0x1D_4E_89, 0x5D_A9_E9, 0xB8_E1_FF, 0xFF_FF_FF]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "acid" => [0x12_00_18, 0x5D_00_A3, 0xFF_00_FF, 0x39_FF_14, 0xE6_FF_00]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "gold" => [0x1C_12_06, 0x6B_4A_12, 0xC9_96_2B, 0xF2_D0_6B, 0xFF_F4_CF]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "rose" => [0x1F_0A_1A, 0x6D_1B_4B, 0xC2_30_6F, 0xF4_97_B6, 0xFF_E3_EE]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "forest" => [0x0B_1F_14, 0x1E_56_31, 0x4C_9A_2A, 0xA4_DE_02, 0xE8_F5_B5]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
         "mono" => vec![[0.12, 0.12, 0.13], [1.0, 1.0, 1.0]],
         // "nsku" and anything unknown
         _ => NSKU.to_vec(),
@@ -159,5 +211,40 @@ mod tests {
         assert_eq!(sample_stops(&s, 0.5), [0.5; 3]);
         assert_eq!(sample_stops(&[], 0.5), [1.0; 3]);
         assert_eq!(sample_stops(&[[0.2; 3]], 0.9), [0.2; 3]);
+    }
+}
+
+#[cfg(test)]
+mod named_palettes {
+    use super::*;
+
+    #[test]
+    fn every_named_palette_is_its_own() {
+        let names = [
+            "viridis",
+            "plasma",
+            "turbo",
+            "neon",
+            "mono",
+            "inferno",
+            "magma",
+            "sunset",
+            "ocean",
+            "aurora",
+            "vaporwave",
+            "cyberpunk",
+            "fire",
+            "ice",
+            "acid",
+            "gold",
+            "rose",
+            "forest",
+        ];
+        for (i, a) in names.iter().enumerate() {
+            assert_ne!(stops(a), stops("nsku"), "{a} fell back to the default");
+            for b in &names[i + 1..] {
+                assert_ne!(stops(a), stops(b), "{a} and {b} are the same");
+            }
+        }
     }
 }

@@ -61,8 +61,29 @@ pub fn mode_for_key(key: &str) -> Option<Mode> {
 
 /// The palettes on offer: the named ones, then the one pulled from an
 /// image and the one picked by hand.
-pub const PALETTES: [&str; 8] =
-    ["nsku", "viridis", "plasma", "turbo", "neon", "mono", "image", "custom"];
+pub const PALETTES: [&str; 21] = [
+    "nsku",
+    "viridis",
+    "plasma",
+    "turbo",
+    "neon",
+    "mono",
+    "inferno",
+    "magma",
+    "sunset",
+    "ocean",
+    "aurora",
+    "vaporwave",
+    "cyberpunk",
+    "fire",
+    "ice",
+    "acid",
+    "gold",
+    "rose",
+    "forest",
+    "image",
+    "custom",
+];
 pub const PC_BAND_AXES: [&str; 5] = ["off", "vertical", "depth", "horizontal", "radial"];
 pub const RING_BANDS: [&str; 3] = ["lows", "mids", "highs"];
 /// What can fire an event (a shock wave, a polygon): the beat grid or a

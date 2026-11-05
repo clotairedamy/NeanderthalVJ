@@ -203,7 +203,9 @@ with what you ran and what the terminal printed.
   scroll to zoom. **Performance** hides the controls.
 - **Presets**: eleven looks ship with the app, and any look can be saved
   and reloaded. The last session comes back at the next launch.
-- **Colours**: a palette per mode, the colours pulled from any picture
+- **Colours**: twenty palettes (Inferno, Sunset, Ocean, Aurora, Vaporwave,
+  Cyberpunk, Fire, Ice, Acid, Gold, Rose, Forest and more), a Shuffle
+  button, a palette per mode, the colours pulled from any picture
   (pick one or drop it on the window), or three picked by hand.
 - **Reactions**: the Motion tab sets how each visualization listens, on
   its own: auto level for quiet or loud masters, dynamics that lift the

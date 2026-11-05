@@ -117,6 +117,31 @@ fn Swatches(colors: Vec<[f32; 3]>) -> Element {
     }
 }
 
+/// The palette menu's wording.
+fn palette_label(name: &str) -> String {
+    match name {
+        "nsku" => "NSKU".to_string(),
+        "mono" => "Black and white".to_string(),
+        "image" => "From a picture".to_string(),
+        "custom" => "Your own".to_string(),
+        other => {
+            let mut c = other.chars();
+            c.next().map(|f| f.to_uppercase().chain(c).collect()).unwrap_or_default()
+        }
+    }
+}
+
+/// A named palette other than `now`, picked by `seed`: never the picture
+/// or hand-picked ones, which have to be chosen on purpose.
+pub fn shuffled_palette(now: &str, seed: u64) -> &'static str {
+    let named: Vec<&'static str> = PALETTES
+        .iter()
+        .copied()
+        .filter(|p| !matches!(*p, "image" | "custom") && *p != now)
+        .collect();
+    named[(seed % named.len() as u64) as usize]
+}
+
 #[component]
 fn Colors(settings: Signal<Settings>) -> Element {
     let s = settings.read().clone();
@@ -145,6 +170,11 @@ fn Colors(settings: Signal<Settings>) -> Element {
             }
         });
     };
+    let shuffle = move |_| {
+        let mut s = settings.write();
+        let now = s.active_palette().to_string();
+        s.set_palette(shuffled_palette(&now, crate::stage::seed_now()));
+    };
     let label = if s.palette_per_mode {
         format!("Palette for {}", s.viz_mode)
     } else {
@@ -156,9 +186,9 @@ fn Colors(settings: Signal<Settings>) -> Element {
                 label,
                 field_type: FieldType::Select,
                 value: active.clone(),
-                options: options(&PALETTES),
-                hint: "Colours every mode: the head's tint, the wall's lows, mids and highs, \
-                       and the generative rings, low to high.",
+                options: PALETTES.iter().map(|v| SegOption::new(palette_label(v), *v)).collect::<Vec<_>>(),
+                hint: "Colours the visualization: the head's tint and its effect, the wall's \
+                       lows, mids and highs, and the generative rings, low to high.",
                 oninput: move |e: FormEvent| settings.write().set_palette(&e.value()),
             }
             Swatches { colors: stops }
@@ -178,8 +208,10 @@ fn Colors(settings: Signal<Settings>) -> Element {
             }
             Hint { "How much of the palette colours the head and the grid. 0 leaves them black and white." }
             div { class: "nv-row",
+                AdsButton { variant: ButtonVariant::Quiet, onclick: shuffle, "Shuffle colours" }
                 AdsButton { variant: ButtonVariant::Quiet, onclick: pick_picture, "Colours from a picture…" }
             }
+            Hint { "Shuffle picks a different palette at random, for this mode alone when each mode keeps its own." }
             Hint { "Takes the five colours a photo is mostly made of. You can also drop a picture on the window." }
             if active == "custom" {
                 div { class: "nv-colors",
