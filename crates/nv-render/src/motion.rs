@@ -66,6 +66,9 @@ pub struct Knobs {
     pub effect_amount: f32,
     /// How far the camera lunges in on each beat (`pc_camera_punch`).
     pub punch: f32,
+    /// What a drum hit does with the Drum glitch: false slices the head into
+    /// offset slabs, true cuts it into lit facets for a moment.
+    pub facets: bool,
 }
 
 impl Default for Knobs {
@@ -89,6 +92,7 @@ impl Default for Knobs {
             effect: crate::head_fx::HeadEffect::None,
             effect_amount: 1.0,
             punch: 0.0,
+            facets: true,
         }
     }
 }
@@ -231,7 +235,10 @@ impl BustMotion {
         if hit > 0.12 && self.wall - self.last_ghost > 0.1 {
             self.last_ghost = self.wall;
             self.glitch = (self.glitch + 0.7 * hit * k.beat_impulse * k.drum_glitch).min(1.3);
-            self.smear = (self.smear + 0.5 * hit * k.drum_glitch).min(1.0);
+            // the slab look streaks too; the facets stay clean
+            if !k.facets {
+                self.smear = (self.smear + 0.5 * hit * k.drum_glitch).min(1.0);
+            }
             self.seed = self.rand() * 100.0;
         }
     }
@@ -362,7 +369,7 @@ impl BustMotion {
             // below instead of by cutting the face apart
             let slab = k.drum_glitch;
             self.glitch = (self.glitch + if big { 1.05 } else { 0.62 } * kk * slab).min(1.2);
-            if big {
+            if big && !k.facets {
                 self.smear = (self.smear + 0.8 * kk * slab).min(1.0);
             }
             self.seed = self.rand() * 100.0;

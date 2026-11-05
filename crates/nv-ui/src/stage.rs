@@ -150,6 +150,7 @@ pub fn params_from(g: &Settings) -> Params {
             },
             effect_amount: g.pc_effect_amount as f32,
             punch: g.pc_camera_punch as f32,
+            facets: g.pc_glitch_look != "slices",
             tint,
             tint_mix,
         },

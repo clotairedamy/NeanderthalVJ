@@ -177,7 +177,9 @@ impl Scene {
         // light fixed in front left the head a black hole
         let (s, c) = camera.azimuth.sin_cos();
         let [kx, ky, kz, _] = crate::renderer::KEY_LIGHT;
-        self.uniforms.key = [kx * c - ky * s, kx * s + ky * c, kz, 0.0];
+        // key.w picks the drum glitch's look: 1 facets, 0 slabs
+        let look = if knobs.facets { 1.0 } else { 0.0 };
+        self.uniforms.key = [kx * c - ky * s, kx * s + ky * c, kz, look];
         let (camera, fov) = lens(camera, params.perspective);
         self.uniforms.view_proj = view_proj_lens(aspect, camera, fov).to_cols_array_2d();
         // eye.w 0 asks the head to mark itself in the alpha, so the effects

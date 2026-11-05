@@ -262,9 +262,10 @@ fn effect_hint(name: &str) -> &'static str {
              wide and the highs make their tails sparkle. The face is never touched."
         }
         "halo" => {
-            "A crown of light behind the head, drawn with nannou's superformula. It takes a \
-             new symmetry every bar, grows points with the highs, swells with the bass, \
-             turns with the mids, and each beat sends a ring out from it."
+            "Three rings drawn with nannou's superformula circle the head in their own tilted \
+             planes, turning like a gyroscope. They take a new symmetry every bar, grow points \
+             with the highs, swell with the bass, turn with the mids, and each beat sends a \
+             ring out."
         }
         "vortex" => {
             "Three arms of particles spiral up around the head: faster with the mids, \
@@ -353,7 +354,7 @@ fn DepthPointCloud(settings: Signal<Settings>) -> Element {
                 max: 200.0,
                 onchange: move |v: f64| settings.write().pc_band_push = v / 100.0,
             }
-            Hint { "Lifts each region off the surface as its band plays. 0 keeps the face whole and only lights it." }
+            Hint { "Lifts a glowing layer of grains off each region as its band plays; the head keeps its shape. 0 only lights it." }
             Slider {
                 label: "Drum glitch",
                 display: format!("{:.2}", s.pc_drum_glitch),
@@ -362,7 +363,22 @@ fn DepthPointCloud(settings: Signal<Settings>) -> Element {
                 max: 200.0,
                 onchange: move |v: f64| settings.write().pc_drum_glitch = v / 100.0,
             }
-            Hint { "Each drum hit slices the head into offset slabs that snap back. 0 leaves it whole." }
+            Hint { "How hard each drum hit glitches the head, in the look below. 0 leaves it untouched." }
+            AdsField {
+                label: "Glitch look",
+                field_type: FieldType::Select,
+                value: s.pc_glitch_look.clone(),
+                options: vec![
+                    SegOption::new("Facets: a cut-crystal flash", "facets"),
+                    SegOption::new("Slices: offset slabs", "slices"),
+                ],
+                hint: if s.pc_glitch_look == "slices" {
+                    "Each hit cuts the head into slabs that twist apart and snap back."
+                } else {
+                    "Each hit turns the head into a cut crystal for a moment: flat-lit facets with glowing cut lines, cut afresh every hit. The shape never moves."
+                },
+                oninput: move |e: FormEvent| settings.write().pc_glitch_look = e.value(),
+            }
             if synth_mode {
                 Hint { "Synth Cloud always follows the synth: pulse width, LFO rate and how fast the tone morphs." }
             } else {

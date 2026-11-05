@@ -14,10 +14,11 @@
 //!   shape, and each drags a curved tail along its own path. The lows
 //!   flare them, the mids set their speed, the beat throws them wide and
 //!   the highs make them sparkle.
-//! - **Halo** -- a superformula crown behind the head, the shape family
-//!   the Generative Geometry is built from. It takes a new symmetry every
-//!   bar, sharpens into points with the highs, swells with the bass, turns
-//!   with the mids, and each beat sends a ring out from it.
+//! - **Halo** -- three superformula rings, the shape family the Generative
+//!   Geometry is built from, each in its own tilted plane, circling the
+//!   head and precessing like a gyroscope. They take a new symmetry every
+//!   bar, sharpen into points with the highs, swell with the bass, turn
+//!   with the mids, and each beat sends a ring out from them.
 //! - **Vortex** -- three arms of particles spiral up around the head,
 //!   faster with the mids, wider with the bass, flashing on the beat.
 //! - **Corona** -- solar flares erupt from the head's outline, behind it.

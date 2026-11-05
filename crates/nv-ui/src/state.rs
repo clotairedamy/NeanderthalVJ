@@ -236,6 +236,8 @@ pub struct Settings {
     pub pc_effect_amount: f64,
     /// How far the camera lunges in on each beat, 0..2, in both head modes.
     pub pc_camera_punch: f64,
+    /// What the Drum glitch does: "facets" (a cut-crystal flash) or "slices".
+    pub pc_glitch_look: String,
 
     // hiding grid
     /// Columns; the source drawing used 40.
@@ -363,6 +365,7 @@ impl Default for Settings {
             pc_effect: "corona".into(),
             pc_effect_amount: 1.0,
             pc_camera_punch: 0.5,
+            pc_glitch_look: "facets".into(),
             grid_cols: 40,
             grid_noise: 7.0,
             grid_warp: 1.0,

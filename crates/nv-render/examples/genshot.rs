@@ -139,6 +139,12 @@ fn main() {
     };
     // `NV_PUNCH=0.5` lunges the camera in on the beat, as the panel's slider
     params.knobs.punch = env("NV_PUNCH").unwrap_or(0.0);
+    // `NV_GLITCH=1.5` and `NV_SLICES=1` drive the drum glitch, `NV_BANDPUSH=2`
+    // and `NV_BANDAXIS=1..4` the band push
+    params.knobs.drum_glitch = env("NV_GLITCH").unwrap_or(params.knobs.drum_glitch);
+    params.knobs.facets = env("NV_SLICES").is_none();
+    params.band_push = env("NV_BANDPUSH").unwrap_or(params.band_push);
+    params.band_axis = env("NV_BANDAXIS").map(|a| a as u8).unwrap_or(params.band_axis);
     // `NV_FX=bloom,threshold,flash,grain,chroma,vignette,ghost` sets them all
     if let Ok(v) = std::env::var("NV_FX") {
         let f: Vec<f32> = v.split(',').filter_map(|x| x.parse().ok()).collect();

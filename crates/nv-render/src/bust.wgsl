@@ -162,8 +162,10 @@ fn deform(p_in : vec3<f32>, n_in : vec3<f32>, zone : f32) -> Deformed {
     let h1 = hash(band * 12.9898 + u.seed);
     let h2 = hash(band * 78.233 + u.seed * 1.7);
     let calm = step(0.35, h1) * smoothstep(0.25, 0.40, zone);
-    let twist = u.glitch * (h1 * 2.0 - 1.0) * 0.62 * calm;
-    let slide = u.glitch * (h2 * 2.0 - 1.0) * 0.14 * calm;
+    // the slab glitch only in its own look (key.w 0); the facets are light
+    let slabs = select(1.0, 0.0, u.key.w > 0.5);
+    let twist = u.glitch * slabs * (h1 * 2.0 - 1.0) * 0.62 * calm;
+    let slide = u.glitch * slabs * (h2 * 2.0 - 1.0) * 0.14 * calm;
 
     // the whole head moves as one; only the neck bends
     let hw = smoothstep(0.16, 0.36, zone);
@@ -290,27 +292,33 @@ fn effect_dot(rnd : f32, surf : vec3<f32>, n : vec3<f32>, rest : vec3<f32>, zone
         // the highs make the tails glitter
         light = light * (1.0 + 2.0 * highs * step(0.9, fract(rnd * 17.3 + time * 3.1)));
     } else if (which == 2) {
-        // Halo: a superformula crown behind the head
-        if (pick > 0.16) { return vec4<f32>(0.0); }
+        // Halo: three superformula rings, each in its own tilted plane,
+        // turning about the head and precessing like a gyroscope -- round
+        // the head in 3D, not a flat shape behind it
+        if (pick > 0.24) { return vec4<f32>(0.0); }
         let h = u.paths[8];
+        let k = floor(hash(rnd * 3.7) * 3.0);
         let th = hash(rnd * 17.9) * TAU;
         // the highs sharpen it into points, the mids round its sides
-        let n1 = 0.6 + 2.4 * (1.0 - highs);
+        let n1 = 1.4 + 2.6 * (1.0 - highs);
         let n2 = 1.0 + 0.6 * mids;
-        let r = clamp(mix(superformula(th, h.x, n1, n2), superformula(th, h.y, n1, n2), h.z), 0.75, 1.5);
-        var big = max(radii.x, radii.z) * (1.25 + 0.3 * lows + 0.2 * kick);
+        let r = clamp(mix(superformula(th, h.x, n1, n2), superformula(th, h.y, n1, n2), h.z), 0.7, 1.4);
+        var big = max(radii.x, radii.z) * (1.2 + 0.16 * k + 0.3 * lows + 0.2 * kick);
         light = 0.5 + 0.9 * lows + 0.5 * kick;
         // a quarter of it rides the ring each beat sends out
         if (hash(rnd * 7.7) < 0.25) {
             big = big * (1.0 + 1.1 * (1.0 - kick));
             light = light * kick * 1.4;
         }
-        let toward = normalize(u.eye.xyz - c);
-        let side = normalize(cross(toward, vec3<f32>(0.0, 0.0, 1.0)));
-        let up = cross(side, toward);
-        let a = th + h.w;
-        p = c - toward * 0.35 + (side * cos(a) + up * sin(a)) * r * big
-          + j * (0.012 + 0.05 * highs);
+        // each ring's plane leans at its own angle and swings round the
+        // vertical with the spin, faster for the inner ones
+        let lean = 0.55 + 0.45 * k;
+        let swing = h.w * (1.0 + 0.35 * k) + k * 2.1;
+        let axis = vec3<f32>(sin(lean) * cos(swing), sin(lean) * sin(swing), cos(lean));
+        let e1 = normalize(cross(axis, vec3<f32>(0.0, 0.0, 1.0)) + vec3<f32>(1e-4, 0.0, 0.0));
+        let e2 = cross(axis, e1);
+        let a = th + h.w * (1.6 - 0.4 * k);
+        p = c + (e1 * cos(a) + e2 * sin(a)) * r * big + j * (0.012 + 0.05 * highs);
     } else if (which == 3) {
         // Vortex: three arms spiralling up around the head
         if (pick > 0.12) { return vec4<f32>(0.0); }
@@ -447,7 +455,12 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     // each region along the band axis answers its own band: with light
     // always, and lifted off the surface only as far as Band push asks
     let band_e = band_light(part.pos, zone);
-    p = p + n * band_e * u.band_push * 0.09;
+    // A share of the particles lifts off as a glowing layer: lifting them
+    // all inflated the head, which at full push looked swollen. The rest
+    // stay on the skin, so the silhouette keeps its shape.
+    let lifter = step(hash(a_rnd * 271.9), 0.35);
+    let lifted = band_e * u.band_push * lifter * (0.4 + 0.6 * hash(a_rnd * 33.7));
+    p = p + n * lifted * 0.14;
 
     // a share of the particles streak sideways, as ghost trails
     let dir = select(1.0, -1.0, d.h2 < 0.5);
@@ -565,9 +578,51 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     lum = lum * (1.0 + 0.8 * u.low * w_low + 0.5 * u.mid * w_mid);
     // the song's shape: dim through a breakdown, full on the drop
     lum = lum * u.meter.z * (1.0 + u.meter.w);
-    lum = lum * (1.0 + 1.6 * band_e);
+    lum = lum * (1.0 + 1.6 * band_e) + lifted * 0.6 * part.fade;
     let tw = step(0.965, fract(a_rnd * 13.7 + u.time * 2.3));
     lum = lum + w_high * u.high * tw * lam * 1.2;            // highs glitter
+
+    // Facets: on a drum hit the head turns for a moment into a cut crystal
+    // -- flat-lit facets with glowing cut lines, cut afresh every hit --
+    // and fades back. Only the light changes; not a particle moves.
+    let cut = select(0.0, smoothstep(0.08, 0.6, u.glitch), u.key.w > 0.5);
+    if (cut > 0.001) {
+        // Voronoi cells, so the facets are irregular like a cut gem rather
+        // than a square net; a fresh set of seeds every hit
+        let rel = part.pos - u.pivot;
+        let q = rel / 0.3 + vec3<f32>(u.seed * 0.37);
+        let base = floor(q);
+        var d1 = 9.0;
+        var d2 = 9.0;
+        var near_cell = base;
+        for (var dz = -1; dz <= 1; dz = dz + 1) {
+            for (var dy = -1; dy <= 1; dy = dy + 1) {
+                for (var dx = -1; dx <= 1; dx = dx + 1) {
+                    let c3 = base + vec3<f32>(f32(dx), f32(dy), f32(dz));
+                    let site = c3 + vec3<f32>(hash3(c3), hash3(c3 + 17.0), hash3(c3 + 41.0));
+                    let dd = length(q - site);
+                    if (dd < d1) {
+                        d2 = d1;
+                        d1 = dd;
+                        near_cell = c3;
+                    } else if (dd < d2) {
+                        d2 = dd;
+                    }
+                }
+            }
+        }
+        let to_edge = d2 - d1;
+        let hc = hash3(near_cell + vec3<f32>(u.seed));
+        // each facet faces its own way: out from the middle of the head,
+        // tipped at random, and lit flat by the key
+        let jitter = vec3<f32>(hash(hc * 3.1), hash(hc * 5.7), hash(hc * 9.3)) - 0.5;
+        let facing_n = normalize(normalize(rel - vec3<f32>(0.0, 0.0, 1.25)) + jitter * 0.9);
+        let flat_lam = pow(max(dot(facing_n, key), 0.0), 1.35);
+        let flat_lum = (0.04 + 0.95 * flat_lam) * part.fade * u.bright * (0.7 + 0.6 * hc)
+                     * u.meter.z * (1.0 + u.meter.w);
+        let line = 1.0 - smoothstep(0.0, 0.05, to_edge);
+        lum = mix(lum, flat_lum, cut) + line * cut * 0.9 * part.fade;
+    }
 
     let col = vec3<f32>(lum) * mix(vec3<f32>(1.0), u.tint, u.tint_mix);
     var alpha = 1.0 - 0.45 * min(abs(streak) * 3.0, 1.0);
