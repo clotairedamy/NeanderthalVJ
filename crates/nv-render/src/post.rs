@@ -102,11 +102,14 @@ struct PostUniforms {
     ghost: f32,
     time: f32,
     aspect: f32,
-    _pad: [f32; 3],
+    /// 1 when the stage marked the head in its alpha (0 there, 1 elsewhere),
+    /// for the echo to leave alone.
+    protect: f32,
+    _pad: [f32; 2],
 }
 
 impl PostUniforms {
-    fn new(k: &PostKnobs, e: &PostEnvelopes, rect: [f32; 4], aspect: f32) -> Self {
+    fn new(k: &PostKnobs, e: &PostEnvelopes, rect: [f32; 4], aspect: f32, protect: bool) -> Self {
         Self {
             rect,
             bloom: k.bloom * (1.0 + 0.5 * e.flash),
@@ -119,7 +122,8 @@ impl PostUniforms {
             ghost: (k.ghost * 0.75 * e.ghost).min(0.92),
             time: e.time,
             aspect,
-            _pad: [0.0; 3],
+            protect: if protect { 1.0 } else { 0.0 },
+            _pad: [0.0; 2],
         }
     }
 }
@@ -349,11 +353,12 @@ impl PostFx {
         stage: (f32, f32, f32, f32),
         knobs: &PostKnobs,
         env: &PostEnvelopes,
+        protect: bool,
     ) {
         let Some(f) = &self.frames else { return };
         let (tw, th) = (f.size.0 as f32, f.size.1 as f32);
         let rect = [stage.0 / tw, stage.1 / th, stage.2 / tw, stage.3 / th];
-        let u = PostUniforms::new(knobs, env, rect, stage.2 / stage.3.max(1.0));
+        let u = PostUniforms::new(knobs, env, rect, stage.2 / stage.3.max(1.0), protect);
         queue.write_buffer(&self.uniforms, 0, bytemuck::bytes_of(&u));
 
         let mut enc =

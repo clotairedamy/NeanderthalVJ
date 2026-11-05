@@ -19,7 +19,8 @@ struct Post {
     ghost    : f32,
     time     : f32,
     aspect   : f32,
-    pad0     : f32,
+    // 1 when the stage marked the head in its alpha: 0 on the head, 1 off it
+    protect  : f32,
     pad1     : f32,
     pad2     : f32,
 };
@@ -76,8 +77,13 @@ fn fs_blur_v(in : Full) -> @location(0) vec4<f32> {
     return blur(in.uv, vec2<f32>(0.0, 1.0));
 }
 
-fn hash(p : vec2<f32>) -> f32 {
-    return fract(sin(dot(p, vec2<f32>(12.9898, 78.233))) * 43758.5453);
+/// PCG: an integer hash. The grain used a sine hash, whose sine loses precision
+/// on the GPU at the large arguments a whole frame of pixels gives it, and
+/// the noise came out as fine diagonal stripes across the picture.
+fn pcg(v : u32) -> u32 {
+    let state = v * 747796405u + 2891336453u;
+    let word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
 }
 
 struct Out {
@@ -101,9 +107,11 @@ fn fs_composite(in : Full) -> Out {
 
     col = col + textureSample(t1, smp, suv).rgb * post.bloom;
 
-    // the echo: the last frames, a little larger, fading
+    // the echo: the last frames, a little larger, fading. Not over the
+    // head: echoes of the fire around it would smear across the face.
+    let head = post.protect * (1.0 - textureSample(t0, smp, suv).a);
     let guv = post.rect.xy + (vec2<f32>(0.5) + d * 0.965) * post.rect.zw;
-    col = col + textureSample(t2, smp, guv).rgb * post.ghost;
+    col = col + textureSample(t2, smp, guv).rgb * post.ghost * (1.0 - head);
 
     col = col * (1.0 + post.flash);
 
@@ -112,7 +120,11 @@ fn fs_composite(in : Full) -> Out {
     let v = 1.0 - smoothstep(0.32, 0.92, length(dv));
     col = col * mix(1.0, v, post.vignette);
 
-    let n = hash(in.uv * vec2<f32>(1931.0, 1093.0) + vec2<f32>(post.time * 37.0, post.time * 11.0));
+    // a fresh pattern every frame, one value per pixel of the frame
+    let size = vec2<f32>(textureDimensions(t0));
+    let px = vec2<u32>(clamp(suv * size, vec2<f32>(0.0), size - 1.0));
+    let frame = u32(post.time * 60.0);
+    let n = f32(pcg(px.x + pcg(px.y + pcg(frame)))) / 4294967295.0;
     col = max(col + (n - 0.5) * post.grain, vec3<f32>(0.0));
 
     var o : Out;

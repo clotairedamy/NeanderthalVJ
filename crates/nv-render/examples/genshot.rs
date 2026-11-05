@@ -129,7 +129,23 @@ fn main() {
 
     // `NV_AZIMUTH=90` looks from the side, in degrees, as dragging would
     let azimuth: f32 = std::env::var("NV_AZIMUTH").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0);
-    let camera = Camera { azimuth: azimuth.to_radians(), ..Camera::default() };
+    // `NV_ZOOM=0.6` moves in closer, `NV_ELEVATION=-30` looks up from lower
+    let env = |k: &str| std::env::var(k).ok().and_then(|v| v.parse::<f32>().ok());
+    let base = Camera::default();
+    let camera = Camera {
+        azimuth: azimuth.to_radians(),
+        elevation: env("NV_ELEVATION").map(f32::to_radians).unwrap_or(base.elevation),
+        distance: base.distance * env("NV_ZOOM").unwrap_or(1.0),
+    };
+    // `NV_PUNCH=0.5` lunges the camera in on the beat, as the panel's slider
+    params.knobs.punch = env("NV_PUNCH").unwrap_or(0.0);
+    // `NV_FX=bloom,threshold,flash,grain,chroma,vignette,ghost` sets them all
+    if let Ok(v) = std::env::var("NV_FX") {
+        let f: Vec<f32> = v.split(',').filter_map(|x| x.parse().ok()).collect();
+        if let [bloom, threshold, flash, grain, chroma, vignette, ghost] = f[..] {
+            params.post = PostKnobs { bloom, threshold, flash, grain, chroma, vignette, ghost };
+        }
+    }
 
     let dt = 1.0 / 60.0;
     let frames = (seconds / dt) as u32;

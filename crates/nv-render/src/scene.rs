@@ -175,7 +175,10 @@ impl Scene {
         };
         let (camera, fov) = lens(camera, params.perspective);
         self.uniforms.view_proj = view_proj_lens(aspect, camera, fov).to_cols_array_2d();
-        self.uniforms.eye = camera_eye(camera).extend(1.0).to_array();
+        // eye.w 0 asks the head to mark itself in the alpha, so the effects
+        // after it can leave the face alone; only when they will read it
+        let mark = if head && !params.post.is_off() { 0.0 } else { 1.0 };
+        self.uniforms.eye = camera_eye(camera).extend(mark).to_array();
         self.uniforms.band_axis = params.band_axis as f32;
         self.uniforms.band_push = params.band_push;
         self.envelopes.update(frame, beat, dt);
@@ -233,7 +236,7 @@ impl Scene {
         }
         if effects {
             let stage = self.renderer.stage_rect();
-            self.post.apply(device, queue, view, stage, &params.post, &self.envelopes);
+            self.post.apply(device, queue, view, stage, &params.post, &self.envelopes, head);
         }
     }
 }

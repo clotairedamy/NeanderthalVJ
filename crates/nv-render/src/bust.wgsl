@@ -482,31 +482,24 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     let drift = normalize(n + vec3<f32>(hash(a_rnd * 5.1) - 0.5, 0.0, 0.8));
     p = p + flaking * drift * life * 0.7;
 
-    // The rings pass through the head. Each lights the silhouette where it
-    // crosses it, and a strong one catches a few grains off the outline
-    // and carries them out with it.
+    // The rings pass through the head as soft bands of light. They used to
+    // light only the silhouette, through each particle's own normal --
+    // which the scan's normal map makes noisy, so the band broke into a
+    // jagged edge -- and to carry grains off the outline, which tore the
+    // face. Now each is a wide, smooth band across the whole surface,
+    // brighter toward the outline, and no particle moves.
     let rc = u.meter.xy;
-    let rel = vec2<f32>(p.x, p.z) - rc;
-    let rd = length(rel);
-    let rdir = rel / max(rd, 1e-4);
+    let rd = length(vec2<f32>(p.x, p.z) - rc);
     let sil = pow(1.0 - abs(dot(n, normalize(u.eye.xyz - p))), 2.0);
     var rims = array<vec4<f32>, 3>(u.rim0, u.rim1, u.rim2);
     var rim = 0.0;
-    var carried = 0.0;
     for (var i = 0u; i < 3u; i = i + 1u) {
         let r = rims[i];
         if (r.y <= 0.001) { continue; }
-        let x = (rd - r.x) / r.z;
+        let x = (rd - r.x) / (r.z * 2.5);
         rim = rim + exp(-x * x) * r.y;
-        // only once the ring has swept past it, so nothing jumps
-        if (carried == 0.0 && r.w > 0.0 && rd < r.x
-            && hash(a_rnd * 433.1 + f32(i) * 7.0) < 0.10 * r.w * sil) {
-            let out = rc + rdir * (r.x - 0.04 * hash(a_rnd * 59.3));
-            p.x = out.x;
-            p.z = out.y;
-            carried = r.y;
-        }
     }
+    let carried = 0.0;
 
     var clip = u.view_proj * vec4<f32>(p, 1.0);
 
@@ -538,8 +531,8 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     var lum = (0.012 + 0.78 * lam) * part.fade * u.bright;
     lum = lum + crest * (0.35 + 0.9 * lam);
 
-    // the rings' light on the outline, and the grains they carry
-    lum = lum + rim * sil * 0.9 * part.fade + carried * 0.6;
+    // the rings' light: across the face, stronger toward the outline
+    lum = lum + rim * (0.3 + 0.5 * sil) * part.fade;
     // Synth Cloud: a sheet of light sweeping the head with the LFO,
     // narrowing to a hard edge and shimmering as the filter resonates
     if (u.sheet.z > 0.001) {
@@ -579,7 +572,8 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     // multiplying by clip.w carries that through the perspective divide.
     sp.radius = px * clip.w;
     // the fragment shader wrote rgb * a over an opaque 1, so pack that
-    sp.color = pack4x8unorm(vec4<f32>(col * alpha, 1.0));
+    // alpha 0 marks the head for the effects after it (eye.w 0), else 1
+    sp.color = pack4x8unorm(vec4<f32>(col * alpha, u.eye.w));
     if (culled) {
         sp.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
         sp.radius = 0.0;
@@ -638,8 +632,9 @@ fn vs_shell(v : ShellIn) -> @builtin(position) vec4<f32> {
 
 @fragment
 fn fs_shell() -> @location(0) vec4<f32> {
-    // the background colour: it exists only to fill the depth buffer
-    return vec4<f32>(0.02, 0.02, 0.04, 1.0);
+    // the background colour: it exists only to fill the depth buffer --
+    // and, like the particles, to mark the head in the alpha
+    return vec4<f32>(0.02, 0.02, 0.04, u.eye.w);
 }
 
 // ─── the rings behind the head ──────────────────────────────────────────
