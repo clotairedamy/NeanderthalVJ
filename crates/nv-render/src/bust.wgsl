@@ -453,18 +453,28 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     let dir = select(1.0, -1.0, d.h2 < 0.5);
     let streaker = step(0.70, hash(a_rnd * 3.3));
     let streak = u.smear * dir * pow(fract(a_rnd * 3.7), 2.0) * 0.8 * d.calm * streaker;
-    p.x = p.x + streak;
+    // sideways across the screen, whatever the angle: along world x, as it
+    // was, a camera at the side saw the slices slide into the head and
+    // leave black bands that jumped up and down with the music
+    let across = normalize(cross(u.eye.xyz - p, vec3<f32>(0.0, 0.0, 1.0)) + vec3<f32>(1e-4, 0.0, 0.0));
+    p = p + across * streak;
 
     // grazing surfaces dissolve: silhouette particles loosen into grains.
     // Not on the front of the face, though: the eye sockets and the lids
     // face sideways too, and loosening them broke the far eye into a
     // smudge.
-    let facing = abs(n.y);
+    // The silhouette as the camera sees it. This read abs(n.y) -- right
+    // only for a camera in front -- so from the side the temple and the
+    // skin behind the eye counted as outline, loosened, and half of it sank
+    // inside the head: black holes.
+    let facing = abs(dot(n, normalize(u.eye.xyz - p)));
     let edge = pow(1.0 - facing, 3.0);
     let face = smoothstep(0.50, 0.58, zone) * (1.0 - smoothstep(0.86, 0.94, zone))
              * smoothstep(0.15, 0.45, u.pivot.y - part.pos.y);
     let jit = vec3<f32>(hash(a_rnd * 17.1), hash(a_rnd * 29.3), hash(a_rnd * 41.7)) - 0.5;
-    p = p + (n * hash(a_rnd * 9.7) * 0.05 + jit * 0.035) * edge * (1.0 - face);
+    // loosened outward only: a grain pushed inside is hidden by the shell
+    let loose = n * hash(a_rnd * 9.7) * 0.05 + jit * 0.035;
+    p = p + (loose - n * min(dot(loose, n), 0.0)) * edge * (1.0 - face);
 
     // the explosion throws each particle out along its own normal
     if (u.explode > 0.001) {
@@ -635,17 +645,39 @@ struct ShellIn {
     @location(2) nrm  : vec3<f32>,
 };
 
+struct ShellOut {
+    @builtin(position) clip : vec4<f32>,
+    @location(0) nrm  : vec3<f32>,
+    @location(1) zone : f32,
+};
+
 @vertex
-fn vs_shell(v : ShellIn) -> @builtin(position) vec4<f32> {
+fn vs_shell(v : ShellIn) -> ShellOut {
     let d = deform(v.pos, v.nrm, v.zone);
-    return u.view_proj * vec4<f32>(d.p, 1.0);
+    var out : ShellOut;
+    // Drawn a little inside the surface. On the very surface, with only a
+    // depth bias between them, the shell won wherever the skin turns away
+    // from the camera -- the temple, behind the eye -- and covered the
+    // particles there with flat patches.
+    let inset = d.p - normalize(d.n) * 0.03;
+    out.clip = u.view_proj * vec4<f32>(inset, 1.0);
+    out.nrm = d.n;
+    out.zone = v.zone;
+    return out;
 }
 
 @fragment
-fn fs_shell() -> @location(0) vec4<f32> {
-    // the background colour: it exists only to fill the depth buffer --
-    // and, like the particles, to mark the head in the alpha
-    return vec4<f32>(0.02, 0.02, 0.04, u.eye.w);
+fn fs_shell(in : ShellOut) -> @location(0) vec4<f32> {
+    // The shell fills the depth buffer, so the far side of the head stays
+    // hidden. It used to be near-black, and every gap between particles --
+    // and every slice a streak pulled aside -- showed as a black speck.
+    // Lit dimly by the same key light, it reads as shadowed skin instead.
+    // It marks the head in the alpha, like the particles.
+    let lam = pow(max(dot(normalize(in.nrm), normalize(u.key.xyz)), 0.0), 1.35);
+    let fade = clamp(in.zone * 2.4 - 0.25, 0.0, 1.0);
+    let lum = (0.012 + 0.78 * lam) * fade * u.bright * 0.32 * u.meter.z;
+    let col = vec3<f32>(lum) * mix(vec3<f32>(1.0), u.tint, u.tint_mix);
+    return vec4<f32>(max(col, vec3<f32>(0.02, 0.02, 0.04)), u.eye.w);
 }
 
 // ─── the rings behind the head ──────────────────────────────────────────
