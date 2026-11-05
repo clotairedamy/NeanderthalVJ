@@ -21,8 +21,8 @@ use std::sync::{Arc, Mutex};
 use dioxus::desktop::window;
 use dioxus::prelude::*;
 use nv_render::{
-    bust::BustModel, motion::Knobs, palette, Camera, GenKnobs, GridKnobs, Impact, Params,
-    PostKnobs, Scene,
+    bust::BustModel, motion::Knobs, palette, Camera, GenKnobs, GridKnobs, HeadEffect, Impact,
+    Params, PostKnobs, Scene,
 };
 
 use crate::state::{Mode, Settings};
@@ -133,6 +133,14 @@ pub fn params_from(g: &Settings) -> Params {
                 "highs" => 2,
                 _ => 0,
             },
+            // the head effect is the Depth Point Cloud's alone: Synth Cloud
+            // is the head played by an oscillator, and keeps its sheet
+            effect: if mode == Mode::PointCloud {
+                HeadEffect::from_name(&g.pc_effect)
+            } else {
+                HeadEffect::None
+            },
+            effect_amount: g.pc_effect_amount as f32,
             tint,
             tint_mix,
         },

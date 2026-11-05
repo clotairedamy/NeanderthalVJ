@@ -25,7 +25,7 @@ fn changes_the_picture(mode: Mode, name: &str, change: Change) {
 
 #[test]
 fn every_visual_control_reaches_the_renderer() {
-    let head: [(&str, Change); 12] = [
+    let head: [(&str, Change); 14] = [
         ("point size", |s| s.pc_point_size = 4.0),
         ("perspective", |s| s.pc_perspective = 0.9),
         ("reactivity", |s| s.pc_reactivity = 1.7),
@@ -38,6 +38,8 @@ fn every_visual_control_reaches_the_renderer() {
         ("mid reactivity", |s| s.pc_mid_gain = 2.0),
         ("high reactivity", |s| s.pc_high_gain = 2.0),
         ("beat impulse", |s| s.beat_impulse = 2.0),
+        ("head effect", |s| s.pc_effect = "halo".into()),
+        ("effect amount", |s| s.pc_effect_amount = 1.8),
     ];
     for (name, change) in head {
         changes_the_picture(Mode::PointCloud, name, change);
@@ -112,6 +114,21 @@ fn every_visual_control_reaches_the_renderer() {
             }
             changes_the_picture(mode, name, change);
         }
+    }
+}
+
+#[test]
+fn the_head_effect_is_the_depth_point_clouds_alone() {
+    // Synth Cloud is the head played by an oscillator: a head effect set
+    // for the Depth Point Cloud must not leak into it
+    let synth =
+        Settings { viz_mode: Mode::SynthCloud, pc_effect: "vortex".into(), ..Settings::default() };
+    assert_eq!(params_from(&synth).knobs.effect, nv_render::HeadEffect::None);
+    let head = Settings { viz_mode: Mode::PointCloud, ..synth };
+    assert_eq!(params_from(&head).knobs.effect, nv_render::HeadEffect::Vortex);
+    // every name the panel offers is one the renderer knows
+    for name in nv_ui::state::PC_EFFECTS {
+        assert_eq!(nv_render::HeadEffect::from_name(name).name(), name);
     }
 }
 

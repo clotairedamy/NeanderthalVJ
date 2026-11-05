@@ -1,13 +1,15 @@
 //! Render a mode to a PNG, through the same `Scene` the app draws with,
 //! driven by a synthetic 120 BPM track.
 //!
-//!     cargo run --release -p nv-render --example genshot -- out.png [seconds] [WxH] [generative|grid|head] [fx]
+//!     cargo run --release -p nv-render --example genshot -- out.png [seconds] [WxH] [generative|grid|head|head:<effect>] [fx]
 //!
 //! `fx` turns every effect on, as the FX tab would.
 use std::f32::consts::TAU;
 
 use nv_audio::AnalysisFrame;
-use nv_render::{BustModel, Camera, GenKnobs, GridKnobs, Impact, Params, PostKnobs, Scene};
+use nv_render::{
+    BustModel, Camera, GenKnobs, GridKnobs, HeadEffect, Impact, Knobs, Params, PostKnobs, Scene,
+};
 
 /// Music without a file: a kick on every beat, a bassline, mids that swell
 /// across the bar and hats on the off-beats.
@@ -71,7 +73,17 @@ fn main() {
         view_formats: &[],
     });
     let view = texture.create_view(&Default::default());
-    let model = BustModel::build("assets/LeePerrySmith.glb", None, 2_000, 3.6, 7).expect("assets/");
+    // the head at the app's full density, with its normal map, so a shot of
+    // it looks like the window; the other modes only need the model's shape
+    let head = mode.starts_with("head");
+    let model = BustModel::build(
+        "assets/LeePerrySmith.glb",
+        head.then_some(std::path::Path::new("assets/Infinite-Level_02_Tangent_SmoothUV.jpg")),
+        if head { 420_000 } else { 2_000 },
+        3.6,
+        7,
+    )
+    .expect("assets/");
     let mut scene = Scene::new(&device, format, &model, (w, h));
     let post = if fx {
         PostKnobs {
@@ -92,7 +104,12 @@ fn main() {
             post,
             ..Default::default()
         },
-        "head" => Params { post, ..Default::default() },
+        m if m.starts_with("head") => {
+            // `head:orbits` and the like pick a head effect
+            let effect =
+                HeadEffect::from_name(m.trim_start_matches("head").trim_start_matches(':'));
+            Params { post, knobs: Knobs { effect, ..Knobs::default() }, ..Default::default() }
+        }
         _ => Params { generative: Some(GenKnobs::default()), post, ..Default::default() },
     };
 

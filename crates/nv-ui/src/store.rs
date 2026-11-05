@@ -85,6 +85,7 @@ pub fn factory() -> Vec<(&'static str, Settings)> {
                 pc_perspective: 0.2,
                 auto_camera: true,
                 auto_camera_speed: 0.3,
+                pc_effect: "none".into(),
                 fx_bloom: 0.2,
                 fx_vignette: 0.6,
                 fx_flash: 0.3,
@@ -98,9 +99,38 @@ pub fn factory() -> Vec<(&'static str, Settings)> {
                 palette_per_mode: false,
                 palette: "turbo".into(),
                 pc_band_axis: "vertical".into(),
+                pc_effect: "vortex".into(),
                 tint_strength: 0.8,
                 fx_bloom: 0.6,
                 fx_threshold: 0.45,
+                ..d()
+            },
+        ),
+        (
+            "Comet Head",
+            Settings {
+                viz_mode: Mode::PointCloud,
+                palette_per_mode: false,
+                palette: "plasma".into(),
+                pc_effect: "orbits".into(),
+                pc_effect_amount: 1.4,
+                tint_strength: 0.7,
+                fx_bloom: 0.7,
+                fx_threshold: 0.5,
+                fx_ghost: 0.35,
+                ..d()
+            },
+        ),
+        (
+            "Saint Halo",
+            Settings {
+                viz_mode: Mode::PointCloud,
+                palette_per_mode: false,
+                palette: "mono".into(),
+                pc_effect: "halo".into(),
+                fx_flash: 1.2,
+                fx_chroma: 0.6,
+                fx_vignette: 0.6,
                 ..d()
             },
         ),

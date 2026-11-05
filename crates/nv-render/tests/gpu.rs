@@ -8,7 +8,7 @@
 use nv_audio::AnalysisFrame;
 use nv_render::{
     bust::BustModel, BustRenderer, Camera, GenKnobs, GridKnobs, GridRenderer, GridUniforms,
-    HidingGrid, Params, PostKnobs, Scene, Uniforms,
+    HeadEffect, HidingGrid, Knobs, Params, PostKnobs, Scene, Uniforms,
 };
 
 const ASSETS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets");
@@ -132,12 +132,17 @@ fn every_effect_composites_in_every_mode() {
         vignette: 1.0,
         ghost: 1.0,
     };
-    let modes = [
+    let mut modes = vec![
         Params { post: all, ..Default::default() },
         Params { post: all, band_axis: 4, band_push: 1.0, perspective: 1.0, ..Default::default() },
         Params { post: all, grid: Some(GridKnobs::default()), ..Default::default() },
         Params { post: all, generative: Some(GenKnobs::default()), ..Default::default() },
     ];
+    // and every head effect, at full strength
+    for effect in HeadEffect::ALL {
+        let knobs = Knobs { effect, effect_amount: 2.0, ..Knobs::default() };
+        modes.push(Params { post: all, knobs, ..Default::default() });
+    }
     let mut f =
         AnalysisFrame { bands: [0.7; 7], rms: 0.6, beat_strength: 1.0, ..Default::default() };
     f.attack = [0.9; 7];

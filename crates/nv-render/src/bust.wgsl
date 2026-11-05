@@ -59,6 +59,11 @@ struct Uniforms {
     rim0      : vec4<f32>,
     rim1      : vec4<f32>,
     rim2      : vec4<f32>,
+    // the Depth Point Cloud's head effect -- see head_fx.rs: (which,
+    // amount, the beat, time), (lows, mids, highs, alive) and its paths
+    fx        : vec4<f32>,
+    fx2       : vec4<f32>,
+    paths     : array<vec4<f32>, 10>,
 };
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
@@ -176,6 +181,139 @@ fn contour(zone : f32, centre : f32, width : f32) -> f32 {
     return exp(-x * x);
 }
 
+// ─── the Depth Point Cloud's head effects (head_fx.rs) ──────────────────
+//
+// The face is never touched. An effect borrows only particles the camera
+// cannot see -- the far side of the head, behind the shell -- and flies
+// them around the head; and anything it would carry in front of the face
+// is dropped before it can cover it.
+
+const TAU : f32 = 6.2831853;
+
+/// Where comet `i` is on its Lissajous path, `back` radians ago.
+fn lissajous(i : i32, back : f32) -> vec3<f32> {
+    let r = u.paths[i];
+    let phase = u.paths[3 + i].xyz;
+    let dir = normalize(sin(r.xyz * (r.w - back) + phase) + vec3<f32>(0.0, 0.0, 1e-3));
+    return u.paths[6].xyz + dir * u.paths[7].xyz * u.paths[6].w;
+}
+
+/// The superformula's radius at angle `th`: circles, polygons, stars and
+/// flowers from four numbers.
+fn superformula(th : f32, m : f32, n1 : f32, n2 : f32) -> f32 {
+    let a = pow(max(abs(cos(m * th * 0.25)), 1e-4), n2);
+    let b = pow(max(abs(sin(m * th * 0.25)), 1e-4), n2);
+    return pow(max(a + b, 1e-4), -1.0 / n1);
+}
+
+/// 1 well clear of the face, 0 in front of it: how much of a borrowed
+/// particle may be drawn where it is.
+fn clear_of_face(p : vec3<f32>) -> f32 {
+    let c = u.paths[6].xyz;
+    let radii = u.paths[7].xyz;
+    let toward = normalize(u.eye.xyz - c);
+    let v = p - c;
+    let front = dot(v, toward);
+    // behind the head's middle, the shell hides whatever it overlaps
+    if (front <= 0.0) { return 1.0; }
+    let side = normalize(cross(toward, vec3<f32>(0.0, 0.0, 1.0)));
+    let up = cross(side, toward);
+    let off = v - toward * front;
+    let q = vec2<f32>(dot(off, side) / radii.x, dot(off, up) / radii.z);
+    return smoothstep(1.05, 1.35, length(q));
+}
+
+/// A borrowed particle: where it goes and how bright it is. Brightness 0
+/// leaves the particle where it was.
+fn effect_dot(rnd : f32) -> vec4<f32> {
+    let which = i32(u.fx.x + 0.5);
+    let amount = u.fx.y;
+    let kick = u.fx.z;
+    let time = u.fx.w;
+    let lows = u.fx2.x;
+    let mids = u.fx2.y;
+    let highs = u.fx2.z;
+    let alive = u.fx2.w;
+    let c = u.paths[6].xyz;
+    let radii = u.paths[7].xyz;
+    let j = (vec3<f32>(hash(rnd * 11.3), hash(rnd * 23.9), hash(rnd * 37.1)) - 0.5) * 2.0;
+    let pick = hash(rnd * 733.1);
+
+    var p = vec3<f32>(0.0);
+    var light = 0.0;
+    if (which == 1) {
+        // Orbits: a share of the hidden particles become three comets
+        if (pick > 0.10) { return vec4<f32>(0.0); }
+        let i = i32(min(hash(rnd * 41.3) * 3.0, 2.0));
+        // more grains toward the comet's head than its tail
+        let along = sqrt(hash(rnd * 59.7));
+        let width = (0.02 + 0.10 * (1.0 - along)) * (1.0 + 0.6 * lows + 0.8 * kick);
+        p = lissajous(i, (1.0 - along) * u.paths[7].w) + j * width;
+        light = (0.25 + 1.75 * along * along) * (0.6 + 0.8 * lows + kick);
+        // the highs make the tails glitter
+        light = light * (1.0 + 2.0 * highs * step(0.9, fract(rnd * 17.3 + time * 3.1)));
+    } else if (which == 2) {
+        // Halo: a superformula crown behind the head
+        if (pick > 0.16) { return vec4<f32>(0.0); }
+        let h = u.paths[8];
+        let th = hash(rnd * 17.9) * TAU;
+        // the highs sharpen it into points, the mids round its sides
+        let n1 = 0.6 + 2.4 * (1.0 - highs);
+        let n2 = 1.0 + 0.6 * mids;
+        let r = clamp(mix(superformula(th, h.x, n1, n2), superformula(th, h.y, n1, n2), h.z), 0.75, 1.5);
+        var big = max(radii.x, radii.z) * (1.25 + 0.3 * lows + 0.2 * kick);
+        light = 0.5 + 0.9 * lows + 0.5 * kick;
+        // a quarter of it rides the ring each beat sends out
+        if (hash(rnd * 7.7) < 0.25) {
+            big = big * (1.0 + 1.1 * (1.0 - kick));
+            light = light * kick * 1.4;
+        }
+        let toward = normalize(u.eye.xyz - c);
+        let side = normalize(cross(toward, vec3<f32>(0.0, 0.0, 1.0)));
+        let up = cross(side, toward);
+        let a = th + h.w;
+        p = c - toward * 0.35 + (side * cos(a) + up * sin(a)) * r * big
+          + j * (0.012 + 0.05 * highs);
+    } else if (which == 3) {
+        // Vortex: three arms spiralling up around the head
+        if (pick > 0.12) { return vec4<f32>(0.0); }
+        let v = u.paths[9];
+        let arm = floor(hash(rnd * 3.1) * 3.0);
+        let f = fract(hash(rnd * 91.1) + v.y);
+        let z = c.z + (f - 0.5) * 2.0 * radii.z;
+        // every particle turns at the arm's speed: a spread of speeds
+        // smears the arms into a curtain within seconds
+        let rad = (1.3 + 0.08 * hash(rnd * 33.3)) * (1.0 + 0.2 * lows + 0.15 * kick);
+        let a = arm * TAU / 3.0 + v.x + (z - c.z) * 2.6 + (hash(rnd * 5.9) - 0.5) * 0.12;
+        p = vec3<f32>(c.x + cos(a) * rad * radii.x, c.y + sin(a) * rad * radii.y, z) + j * 0.012;
+        // fading in at the bottom and out at the top
+        light = (0.35 + 0.8 * mids + 0.6 * kick) * sin(3.14159 * f);
+    } else {
+        return vec4<f32>(0.0);
+    }
+    // a dot is opaque, so a dimmed one would show as a dark speck over the
+    // face: anything near it is dropped outright instead
+    if (clear_of_face(p) < 0.5) { return vec4<f32>(p, -1.0); }
+    return vec4<f32>(p, light * amount * alive);
+}
+
+/// The sprite for a borrowed particle, lit like the rest of the scene.
+fn effect_sprite(p : vec3<f32>, light : f32, rnd : f32) -> Sprite {
+    var sp : Sprite;
+    let clip = u.view_proj * vec4<f32>(p, 1.0);
+    let lum = light * u.meter.z * (1.0 + u.meter.w);
+    let col = vec3<f32>(lum) * mix(vec3<f32>(1.0), u.tint, u.tint_mix);
+    let px = u.point * (0.6 + 0.8 * hash(rnd * 53.9)) * clamp(7.0 / max(clip.w, 0.001), 0.5, 2.5);
+    sp.clip = clip;
+    sp.radius = px * clip.w;
+    sp.color = pack4x8unorm(vec4<f32>(col, 1.0));
+    if (light <= 0.004) {
+        sp.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+        sp.radius = 0.0;
+    }
+    return sp;
+}
+
 @compute @workgroup_size(256)
 fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     let pi = gid.x;
@@ -194,6 +332,17 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
 
     let d = deform(p, n, zone);
     p = d.p; n = d.n;
+
+    // A head effect borrows particles the camera cannot see: those on the
+    // far side of the head, behind the shell. The face's own particles go
+    // on below exactly as they would without it.
+    if (u.fx.x > 0.5 && dot(n, normalize(u.eye.xyz - p)) < -0.4) {
+        let e = effect_dot(a_rnd);
+        if (e.w != 0.0) {
+            sprites_out[pi] = effect_sprite(e.xyz, max(e.w, 0.0), a_rnd);
+            return;
+        }
+    }
 
     // each region along the band axis answers its own band: with light
     // always, and lifted off the surface only as far as Band push asks

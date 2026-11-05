@@ -60,6 +60,10 @@ pub struct Knobs {
     pub tint_mix: f32,
     /// Which band the rings answer: 0 lows, 1 mids, 2 highs.
     pub ring_band: u8,
+    /// The Depth Point Cloud's head effect, and how strongly it plays
+    /// (`pc_effect`, `pc_effect_amount`). None for Synth Cloud.
+    pub effect: crate::head_fx::HeadEffect,
+    pub effect_amount: f32,
 }
 
 impl Default for Knobs {
@@ -80,6 +84,8 @@ impl Default for Knobs {
             tint: [1.0, 1.0, 1.0],
             tint_mix: 0.0,
             ring_band: 0,
+            effect: crate::head_fx::HeadEffect::None,
+            effect_amount: 1.0,
         }
     }
 }

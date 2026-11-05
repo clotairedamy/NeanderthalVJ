@@ -6,7 +6,9 @@ use dioxus::prelude::*;
 
 use super::{Group, Hint, Slider};
 use crate::stage::palette_stops;
-use crate::state::{Mode, Settings, GRID_IMPACTS, MODES, PALETTES, PC_BAND_AXES, RING_BANDS};
+use crate::state::{
+    Mode, Settings, GRID_IMPACTS, MODES, PALETTES, PC_BAND_AXES, PC_EFFECTS, RING_BANDS,
+};
 
 fn options(values: &[&str]) -> Vec<SegOption> {
     values.iter().map(|v| SegOption::new(*v, *v)).collect()
@@ -197,6 +199,37 @@ fn Colors(settings: Signal<Settings>) -> Element {
     }
 }
 
+/// The Head effect menu's wording for each effect.
+fn effect_label(name: &str) -> &'static str {
+    match name {
+        "orbits" => "Orbits (nannou comets)",
+        "halo" => "Halo (nannou superformula)",
+        "vortex" => "Vortex",
+        _ => "None",
+    }
+}
+
+/// What the chosen head effect does, under the menu.
+fn effect_hint(name: &str) -> &'static str {
+    match name {
+        "orbits" => {
+            "Three comets circle the head on knotted paths built with nannou, re-shaped \
+             every bar. The lows flare them, the mids speed them up, the beat throws them \
+             wide and the highs make their tails sparkle. The face is never touched."
+        }
+        "halo" => {
+            "A crown of light behind the head, drawn with nannou's superformula. It takes a \
+             new symmetry every bar, grows points with the highs, swells with the bass, \
+             turns with the mids, and each beat sends a ring out from it."
+        }
+        "vortex" => {
+            "Three arms of particles spiral up around the head: faster with the mids, \
+             wider with the bass, brighter on the beat."
+        }
+        _ => "The plain head: the rings, the crests of light on the beat and the dust.",
+    }
+}
+
 #[component]
 fn DepthPointCloud(settings: Signal<Settings>) -> Element {
     let s = settings.read().clone();
@@ -204,6 +237,25 @@ fn DepthPointCloud(settings: Signal<Settings>) -> Element {
     rsx! {
         Group { title: "Depth Point Cloud",
             Hint { "The scanned head as 420,000 particles, lit by the music. Drag the stage to turn it, scroll to zoom." }
+            if !synth_mode {
+                AdsField {
+                    label: "Head effect",
+                    field_type: FieldType::Select,
+                    value: s.pc_effect.clone(),
+                    options: PC_EFFECTS.iter().map(|v| SegOption::new(effect_label(v), *v)).collect::<Vec<_>>(),
+                    hint: effect_hint(&s.pc_effect),
+                    oninput: move |e: FormEvent| settings.write().pc_effect = e.value(),
+                }
+                Slider {
+                    label: "Effect amount",
+                    display: format!("{:.2}", s.pc_effect_amount),
+                    value: s.pc_effect_amount * 100.0,
+                    min: 0.0,
+                    max: 200.0,
+                    onchange: move |v: f64| settings.write().pc_effect_amount = v / 100.0,
+                }
+                Hint { "How strongly the head effect plays. 0 turns it off; 2 is twice the usual." }
+            }
             Slider {
                 label: "Point size",
                 display: format!("{:.1}", s.pc_point_size),

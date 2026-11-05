@@ -12,6 +12,7 @@ use crate::generative::{GenKnobs, GenVertex, Generative};
 use crate::generative_render::GenerativeRenderer;
 use crate::grid::{GridKnobs, GridUniforms, HidingGrid};
 use crate::grid_render::GridRenderer;
+use crate::head_fx::{HeadFx, HeadShape};
 use crate::motion::{BustMotion, Knobs};
 use crate::post::{PostEnvelopes, PostFx, PostKnobs};
 use crate::renderer::{
@@ -65,6 +66,7 @@ pub struct Scene {
     post: PostFx,
     envelopes: PostEnvelopes,
     motion: BustMotion,
+    head_fx: HeadFx,
     rings: RingField,
     uniforms: Uniforms,
     pivot: [f32; 3],
@@ -87,6 +89,7 @@ impl Scene {
             post: PostFx::new(device, format),
             envelopes: PostEnvelopes::default(),
             motion: BustMotion::default(),
+            head_fx: HeadFx::new(HeadShape::of(model), 11),
             rings: RingField::default(),
             uniforms: Uniforms::default(),
             pivot: model.pivot.to_array(),
@@ -118,6 +121,22 @@ impl Scene {
     ) {
         let knobs = params.knobs;
         self.motion.update(frame, dt, beat, knobs, &mut self.uniforms);
+        // only the head has a head effect
+        let effect = if params.grid.is_none() && params.generative.is_none() {
+            knobs.effect
+        } else {
+            crate::head_fx::HeadEffect::None
+        };
+        self.head_fx.update(
+            frame,
+            dt,
+            beat,
+            effect,
+            knobs.effect_amount,
+            knobs.mid_gain,
+            knobs.high_gain,
+            &mut self.uniforms,
+        );
 
         // whichever band the panel points the rings at
         let level = match knobs.ring_band {

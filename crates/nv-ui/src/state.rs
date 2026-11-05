@@ -65,6 +65,8 @@ pub const PALETTES: [&str; 8] =
     ["nsku", "viridis", "plasma", "turbo", "neon", "mono", "image", "custom"];
 pub const PC_BAND_AXES: [&str; 5] = ["off", "vertical", "depth", "horizontal", "radial"];
 pub const RING_BANDS: [&str; 3] = ["lows", "mids", "highs"];
+/// The Depth Point Cloud's head effects, as `nv_render::HeadEffect` names them.
+pub const PC_EFFECTS: [&str; 4] = ["none", "orbits", "halo", "vortex"];
 pub const GRID_IMPACTS: [&str; 4] = ["centre", "scattered", "floor", "sides"];
 
 /// Which panel the left column is showing.
@@ -174,6 +176,10 @@ pub struct Settings {
     pub pc_high_gain: f64,
     /// Which band the rings answer: "lows" | "mids" | "highs".
     pub pc_ring_band: String,
+    /// The Depth Point Cloud's head effect (one of `PC_EFFECTS`) and how
+    /// strongly it plays, 0..2. Synth Cloud has none.
+    pub pc_effect: String,
+    pub pc_effect_amount: f64,
 
     // hiding grid
     /// Columns; the source drawing used 40.
@@ -281,6 +287,10 @@ impl Default for Settings {
             pc_mid_gain: 1.0,
             pc_high_gain: 1.0,
             pc_ring_band: "lows".into(),
+            // the head effect is what sets the Depth Point Cloud apart from
+            // Synth Cloud, so it starts on, with the nannou comets
+            pc_effect: "orbits".into(),
+            pc_effect_amount: 1.0,
             grid_cols: 40,
             grid_noise: 7.0,
             grid_warp: 1.0,
