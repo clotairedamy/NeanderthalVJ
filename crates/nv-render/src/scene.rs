@@ -173,6 +173,11 @@ impl Scene {
         } else {
             camera
         };
+        // the key light goes round with the camera: seen from behind, a
+        // light fixed in front left the head a black hole
+        let (s, c) = camera.azimuth.sin_cos();
+        let [kx, ky, kz, _] = crate::renderer::KEY_LIGHT;
+        self.uniforms.key = [kx * c - ky * s, kx * s + ky * c, kz, 0.0];
         let (camera, fov) = lens(camera, params.perspective);
         self.uniforms.view_proj = view_proj_lens(aspect, camera, fov).to_cols_array_2d();
         // eye.w 0 asks the head to mark itself in the alpha, so the effects

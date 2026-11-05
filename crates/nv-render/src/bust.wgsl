@@ -64,6 +64,8 @@ struct Uniforms {
     fx        : vec4<f32>,
     fx2       : vec4<f32>,
     paths     : array<vec4<f32>, 14>,
+    // the key light, turned with the camera
+    key       : vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
@@ -218,7 +220,9 @@ fn band_level(i : i32) -> f32 {
 }
 
 /// 1 well clear of the face, 0 in front of it: how much of a borrowed
-/// particle may be drawn where it is.
+/// particle may be drawn where it is. Only the face is kept clear: an
+/// effect may pass in front of the back or the sides of the head, so a
+/// vortex seen from behind still wraps all the way round.
 fn clear_of_face(p : vec3<f32>) -> f32 {
     let c = u.paths[6].xyz;
     let radii = u.paths[7].xyz;
@@ -227,6 +231,9 @@ fn clear_of_face(p : vec3<f32>) -> f32 {
     let front = dot(v, toward);
     // behind the head's middle, the shell hides whatever it overlaps
     if (front <= 0.0) { return 1.0; }
+    // the model faces -y, turned by the head's yaw
+    let face = vec3<f32>(sin(u.yaw), -cos(u.yaw), 0.0);
+    if (dot(v, face) <= 0.0) { return 1.0; }
     let side = normalize(cross(toward, vec3<f32>(0.0, 0.0, 1.0)));
     let up = cross(side, toward);
     let off = v - toward * front;
@@ -333,8 +340,11 @@ fn effect_dot(rnd : f32, surf : vec3<f32>, n : vec3<f32>, rest : vec3<f32>, zone
         // which is what makes flames rather than fuzz
         let piece = floor(rest * 7.0);
         let tongue = hash3(piece);
+        // a third of the tongues stay low and dim, so the rest stand out as
+        // rays with dark between them, not an even fuzz
+        let ray = step(0.35, hash(tongue * 13.7));
         let jag = 0.5 + 0.9 * hash(tongue * 91.7 + floor(time * 6.0) * 0.37);
-        let len = (0.15 + 1.8 * level * jag + 1.0 * kick) * amount;
+        let len = (0.15 + (1.8 * level * jag + 1.0 * kick) * (0.25 + 0.75 * ray)) * amount;
         let lean = vec3<f32>(hash(tongue * 3.1), hash(tongue * 5.3), hash(tongue * 7.9)) - 0.5;
         // out from the head as the camera sees it, as well as along the
         // skull's own normal: a flare from the back of the head fans out
@@ -356,7 +366,7 @@ fn effect_dot(rnd : f32, surf : vec3<f32>, n : vec3<f32>, rest : vec3<f32>, zone
         p = surf - taper + dir * s * len
           + sway * sin(s * 8.0 - time * 7.0 + tongue * 20.0) * 0.06 * s
           + j * 0.006;
-        light = (0.3 + 0.9 * (1.0 - s)) * (0.4 + 0.8 * level + 0.3 * kick);
+        light = (0.3 + 0.9 * (1.0 - s)) * (0.4 + 0.8 * level + 0.3 * kick) * (0.2 + 0.8 * ray);
         // the highs make the tips spit sparks
         light = light * (1.0 + 2.5 * highs * s * step(0.94, fract(rnd * 13.1 + time * 4.3)));
         // it starts on the far side and only moves away from the camera,
@@ -518,9 +528,10 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
         culled = true;
     }
 
-    // one hard key light from the camera's left and above: the far side of
-    // the face falls into real black, as in a spot-lit photograph
-    let key = normalize(vec3<f32>(-0.78, -0.50, 0.38));
+    // one hard key light from the camera's left and above, whichever side
+    // the camera is on: the far side falls into real black, as in a
+    // spot-lit photograph
+    let key = normalize(u.key.xyz);
     let lam = pow(max(dot(n, key), 0.0), 1.35);
     // The beat's shockwave travels up the head as a band of *light*
     // rather than a bulge: it answers the music without moving a single

@@ -65,7 +65,14 @@ pub struct Uniforms {
     /// shells as (radius, strength) pairs (10, 11) and the seven bands for
     /// the corona (12, 13).
     pub paths: [[f32; 4]; 14],
+    /// The key light's direction (`w` unused). It turns with the camera,
+    /// so the head is lit from the viewer's side from any angle.
+    pub key: [f32; 4],
 }
+
+/// The key light, for the camera in front: from the camera's left and
+/// above, so the far side of the face falls into real black.
+pub const KEY_LIGHT: [f32; 4] = [-0.78, -0.50, 0.38, 0.0];
 
 /// How far the rings are scaled out from their own units into the world.
 pub const RING_SCALE: f32 = 2.4;
@@ -108,6 +115,7 @@ impl Default for Uniforms {
             fx: [0.0; 4],
             fx2: [0.0; 4],
             paths: [[0.0; 4]; 14],
+            key: KEY_LIGHT,
         }
     }
 }
