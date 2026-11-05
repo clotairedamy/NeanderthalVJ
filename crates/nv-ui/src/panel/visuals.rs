@@ -4,10 +4,11 @@
 use ads::ui::{AdsButton, AdsChoice, AdsField, ButtonVariant, ChoiceKind, FieldType, SegOption};
 use dioxus::prelude::*;
 
-use super::{Group, Hint, Slider};
+use super::{drive_options, source_options, Group, Hint, Slider};
 use crate::stage::palette_stops;
 use crate::state::{
-    Mode, Settings, GRID_IMPACTS, MODES, PALETTES, PC_BAND_AXES, PC_EFFECTS, RING_BANDS,
+    Mode, Settings, GRID_IMPACTS, MODES, MUTATE_BARS, PALETTES, PC_BAND_AXES, PC_EFFECTS,
+    RING_BANDS,
 };
 
 fn options(values: &[&str]) -> Vec<SegOption> {
@@ -490,6 +491,42 @@ fn HidingGridPanel(settings: Signal<Settings>) -> Element {
             }
             Hint { "From the original black and white to the palette's colours for lows, mids and highs." }
         }
+        Group { title: "Hiding Grid interactions",
+            Hint { "Rewire what in the music moves the wall." }
+            AdsField {
+                label: "Shock waves fire on",
+                field_type: FieldType::Select,
+                value: s.grid_wave_source.clone(),
+                options: source_options(),
+                hint: "What strikes the wall. The kick also answers the beat grid, so a kick the \
+                       transients miss still lands; the snare or the hats give a busier wall.",
+                oninput: move |e: FormEvent| settings.write().grid_wave_source = e.value(),
+            }
+            AdsField {
+                label: "Twist follows",
+                field_type: FieldType::Select,
+                value: s.grid_twist_by.clone(),
+                options: drive_options(),
+                hint: "What turns each square about its centre. Nothing holds them square.",
+                oninput: move |e: FormEvent| settings.write().grid_twist_by = e.value(),
+            }
+            AdsField {
+                label: "Sparks follow",
+                field_type: FieldType::Select,
+                value: s.grid_sparks_by.clone(),
+                options: drive_options(),
+                hint: "What makes cells flash. The highs glitter with the hats; the lows flash on the kick.",
+                oninput: move |e: FormEvent| settings.write().grid_sparks_by = e.value(),
+            }
+            AdsField {
+                label: "Warp follows",
+                field_type: FieldType::Select,
+                value: s.grid_warp_by.clone(),
+                options: drive_options(),
+                hint: "What bends the lattice. Loudness makes the wall breathe with the whole mix.",
+                oninput: move |e: FormEvent| settings.write().grid_warp_by = e.value(),
+            }
+        }
     }
 }
 
@@ -593,6 +630,54 @@ fn GenerativePanel(settings: Signal<Settings>) -> Element {
                 onchange: move |v: f64| settings.write().pc_high_gain = v / 100.0,
             }
             Hint { "How hard the highs make the outer rings shimmer." }
+        }
+        Group { title: "Generative Geometry interactions",
+            Hint { "Rewire what in the music grows and moves the structure." }
+            AdsField {
+                label: "Polygons fire on",
+                field_type: FieldType::Select,
+                value: s.gen_polygon_source.clone(),
+                options: source_options(),
+                hint: "What throws a polygon out from the centre: the beat, or one part of the kit.",
+                oninput: move |e: FormEvent| settings.write().gen_polygon_source = e.value(),
+            }
+            AdsField {
+                label: "Spin follows",
+                field_type: FieldType::Select,
+                value: s.gen_spin_by.clone(),
+                options: drive_options(),
+                hint: "What drives the rings round. Nothing leaves only their slow drift.",
+                oninput: move |e: FormEvent| settings.write().gen_spin_by = e.value(),
+            }
+            AdsField {
+                label: "Shimmer follows",
+                field_type: FieldType::Select,
+                value: s.gen_shimmer_by.clone(),
+                options: drive_options(),
+                hint: "What makes the edges of the rings quiver.",
+                oninput: move |e: FormEvent| settings.write().gen_shimmer_by = e.value(),
+            }
+            AdsChoice {
+                checked: s.gen_unison,
+                onchange: move |on| settings.write().gen_unison = on,
+                "Every ring swells with the bass"
+            }
+            Hint { "Off, each ring answers its own band, bass at the centre. On, the whole structure pumps with the kick." }
+            AdsField {
+                label: "Mutate every",
+                field_type: FieldType::Select,
+                value: s.gen_mutate_bars.to_string(),
+                options: MUTATE_BARS
+                    .iter()
+                    .map(|b| SegOption::new(if *b == 1 { "1 bar".to_string() } else { format!("{b} bars") }, b.to_string()))
+                    .collect::<Vec<_>>(),
+                hint: "How often the shapes change. Longer lets a structure settle before it moves on.",
+                oninput: move |e: FormEvent| {
+                    if let Ok(b) = e.value().parse::<u32>() {
+                        settings.write().gen_mutate_bars = b;
+                    }
+                },
+            }
         }
     }
 }

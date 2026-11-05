@@ -29,6 +29,7 @@ use nannou_core::rand::rand::{RngExt, SeedableRng};
 use nv_audio::AnalysisFrame;
 
 use crate::noise::{perlin3, Permutation};
+use crate::react::{Drive, HitDetector, Source};
 
 /// One ring per analysis band.
 pub const MAX_LAYERS: usize = 7;
@@ -63,6 +64,15 @@ pub struct GenKnobs {
     pub flow: f32,
     /// How luminous the lines are, 1 as designed.
     pub glow: f32,
+    /// What throws a polygon out from the centre.
+    pub polygon_source: Source,
+    /// What turns the rings, and what shimmers their edges.
+    pub spin_by: Drive,
+    pub shimmer_by: Drive,
+    /// Every ring swells with the bass, rather than each with its band.
+    pub unison: bool,
+    /// The structure mutates every this many bars.
+    pub mutate_bars: u32,
 }
 
 impl Default for GenKnobs {
@@ -85,6 +95,11 @@ impl Default for GenKnobs {
             spin: 1.0,
             flow: 1.0,
             glow: 1.0,
+            polygon_source: Source::Beat,
+            spin_by: Drive::Mids,
+            shimmer_by: Drive::Highs,
+            unison: false,
+            mutate_bars: 1,
         }
     }
 }
@@ -173,6 +188,14 @@ pub struct Generative {
     last_bar: f32,
     beats: u32,
     symmetry: u32,
+    /// What the panel has turning the rings and shimmering their edges.
+    spin_lvl: f32,
+    shimmer: f32,
+    /// Every ring swells with the bass rather than its own band.
+    unison: bool,
+    /// Bars counted, for mutating every few; and what throws the polygons.
+    bars: u32,
+    hits: HitDetector,
 }
 
 impl Default for Generative {
@@ -204,6 +227,11 @@ impl Generative {
             last_bar: 0.0,
             beats: 0,
             symmetry: 6,
+            spin_lvl: 0.0,
+            shimmer: 0.0,
+            unison: false,
+            bars: 0,
+            hits: HitDetector::default(),
         };
         for i in 0..MAX_LAYERS {
             let shape = g.random_shape(i, 6, 0.5);
@@ -263,10 +291,13 @@ impl Generative {
         self.mids = self.energy[2..5].iter().sum::<f32>() / 3.0;
         self.highs = self.energy[5..].iter().sum::<f32>() / 2.0;
         self.bass_kick = (self.bass_kick * (-dt * 6.0).exp()).max(self.flash[0].max(self.flash[1]));
+        self.spin_lvl = self.drive(k.spin_by, frame);
+        self.shimmer = self.drive(k.shimmer_by, frame);
+        self.unison = k.unison;
 
         // the rings turn, faster with the mids
         for (i, l) in self.layers.iter_mut().enumerate() {
-            let push = (1.0 + 6.0 * self.mids + 2.0 * self.flash[i]) * k.spin;
+            let push = (1.0 + 6.0 * self.spin_lvl + 2.0 * self.flash[i]) * k.spin;
             l.rotation = (l.rotation + TAU * l.spin * push * dt) % TAU;
         }
 
@@ -279,7 +310,11 @@ impl Generative {
             self.beats += 1;
         }
         let eighth = beat && self.beats.is_multiple_of(8) && frame.bar_phase == 0.0;
-        if (new_bar || eighth) && k.evolve > 0.0 {
+        if new_bar || eighth {
+            self.bars = self.bars.wrapping_add(1);
+        }
+        let due = self.bars.is_multiple_of(k.mutate_bars.max(1));
+        if (new_bar || eighth) && due && k.evolve > 0.0 {
             // the more evolve, the more rings change at once
             let n = 1 + (k.evolve * (MAX_LAYERS - 1) as f32).round() as usize;
             for _ in 0..n {
@@ -294,9 +329,10 @@ impl Generative {
             l.shape.ease(&to, ease);
         }
 
-        // a beat throws a polygon out from the centre
-        if beat {
-            let strength = (frame.beat_strength as f32).clamp(0.3, 1.0);
+        // a hit throws a polygon out from the centre: the beat, or the
+        // part of the kit the panel picked
+        if let Some(hit) = self.hits.hit(k.polygon_source, frame, beat, dt) {
+            let strength = hit.clamp(0.3, 1.0);
             let sides =
                 if self.beats.is_multiple_of(4) { self.symmetry } else { 3 + self.beats % 4 };
             let rotation = self.rng.random_range(0.0..TAU);
@@ -319,6 +355,27 @@ impl Generative {
         self.waves.retain(|w| w.life > 0.0 && w.radius < 1.7);
     }
 
+    /// The level of the music behind `d`, from the smoothed bands.
+    fn drive(&self, d: Drive, frame: &AnalysisFrame) -> f32 {
+        match d {
+            Drive::Lows => (self.energy[0] + self.energy[1]) * 0.5,
+            Drive::Mids => self.mids,
+            Drive::Highs => self.highs,
+            Drive::Loudness => (frame.rms as f32).clamp(0.0, 1.5),
+            Drive::Off => 0.0,
+        }
+    }
+
+    /// Ring `i`'s energy and flash: its own band's, or with the rings in
+    /// unison, the bass's.
+    fn level_of(&self, i: usize) -> (f32, f32) {
+        if self.unison {
+            ((self.energy[0] + self.energy[1]) * 0.5, self.bass_kick)
+        } else {
+            (self.energy[i], self.flash[i])
+        }
+    }
+
     /// How many rings `complexity` asks for.
     fn layer_count(k: &GenKnobs) -> usize {
         (3.0 + k.complexity.clamp(0.0, 1.0) * (MAX_LAYERS - 3) as f32).round() as usize
@@ -327,8 +384,7 @@ impl Generative {
     /// Ring `i` as points, in units where 1 is half the shorter side.
     fn ring(&self, i: usize, n: usize, out: &mut Vec<Vec2>) {
         let l = &self.layers[i];
-        let e = self.energy[i];
-        let f = self.flash[i];
+        let (e, f) = self.level_of(i);
         let mut rs = [0.0f32; RES];
         let mut max = 0.0f32;
         for (j, r) in rs.iter_mut().enumerate() {
@@ -339,7 +395,7 @@ impl Generative {
         // normalised, so every shape fits its ring whatever its numbers
         let base: f32 = map_range(i as f32, 0.0, (n.max(2) - 1) as f32, 0.16, 0.86);
         let scale = base * (1.0 + 0.32 * e + 0.12 * f) / max.max(1e-6);
-        let shimmer = 0.045 * self.highs * (0.4 + i as f32 / n as f32);
+        let shimmer = 0.045 * self.shimmer * (0.4 + i as f32 / n as f32);
         out.clear();
         for (j, r) in rs.iter().enumerate() {
             let theta = j as f32 / RES as f32 * TAU;
@@ -362,7 +418,8 @@ impl Generative {
         let a = (t.floor() as usize).min(3);
         let f = t - a as f32;
         let (c0, c1) = (k.colors[a], k.colors[a + 1]);
-        let lift = 0.25 + 0.9 * self.energy[i] + 1.0 * self.flash[i];
+        let (energy, flash) = self.level_of(i);
+        let lift = 0.25 + 0.9 * energy + 1.0 * flash;
         [
             (c0[0] + (c1[0] - c0[0]) * f) * lift,
             (c0[1] + (c1[1] - c0[1]) * f) * lift,
@@ -385,7 +442,8 @@ impl Generative {
         for i in 0..n {
             self.ring(i, n, &mut pts);
             let color = self.color(i, n, k);
-            let width = (1.4 + 4.5 * self.energy[i] + 3.0 * self.flash[i]) * px;
+            let (e, f) = self.level_of(i);
+            let width = (1.4 + 4.5 * e + 3.0 * f) * px;
             ribbon(&pts, true, width, color, fit, out);
             // a faint echo inside each ring gives it depth
             let echo: Vec<Vec2> = pts.iter().map(|p| *p * 0.94).collect();

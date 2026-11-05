@@ -65,6 +65,37 @@ pub const PALETTES: [&str; 8] =
     ["nsku", "viridis", "plasma", "turbo", "neon", "mono", "image", "custom"];
 pub const PC_BAND_AXES: [&str; 5] = ["off", "vertical", "depth", "horizontal", "radial"];
 pub const RING_BANDS: [&str; 3] = ["lows", "mids", "highs"];
+/// What can fire an event (a shock wave, a polygon): the beat grid or a
+/// part of the kit.
+pub const SOURCES: [&str; 5] = ["beat", "kick", "snare", "hats", "any"];
+/// What part of the music can drive a movement.
+pub const DRIVES: [&str; 5] = ["lows", "mids", "highs", "loudness", "off"];
+/// Which beats a visualization answers.
+pub const DIVISIONS: [&str; 3] = ["every", "half", "bar"];
+/// How many bars between the Generative Geometry's mutations.
+pub const MUTATE_BARS: [u32; 4] = [1, 2, 4, 8];
+
+/// How one visualization listens: the Motion tab's per-mode shaping. At
+/// its defaults it changes nothing.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Reaction {
+    pub auto_level: bool,
+    /// -1 lifts the quiet parts, 1 keeps only the peaks.
+    pub dynamics: f64,
+    /// 0..1: how long a level takes to climb, and to let go.
+    pub rise: f64,
+    pub fall: f64,
+    /// One of `DIVISIONS`.
+    pub hits: String,
+}
+
+impl Default for Reaction {
+    fn default() -> Self {
+        Self { auto_level: false, dynamics: 0.0, rise: 0.0, fall: 0.0, hits: "every".into() }
+    }
+}
+
 /// The Depth Point Cloud's head effects, as `nv_render::HeadEffect` names them.
 pub const PC_EFFECTS: [&str; 4] = ["none", "orbits", "halo", "vortex"];
 pub const GRID_IMPACTS: [&str; 4] = ["centre", "scattered", "floor", "sides"];
@@ -139,6 +170,8 @@ pub struct Settings {
     pub palette_per_mode: bool,
     /// The palette of each mode, in [`MODES`] order, when it keeps its own.
     pub mode_palettes: [String; 4],
+    /// How each visualization listens, by `Mode::index`.
+    pub reactions: [Reaction; 4],
     /// How much of the palette colours the head and the grid, 0..1.
     pub tint_strength: f64,
     /// The colours pulled from a picture, low to high.
@@ -208,6 +241,12 @@ pub struct Settings {
     pub grid_tilt: f64,
     /// Black and white to full palette colour.
     pub grid_color: f64,
+    /// What fires the shock waves (one of `SOURCES`), and what turns the
+    /// squares, strikes the sparks and warps the lattice (`DRIVES`).
+    pub grid_wave_source: String,
+    pub grid_twist_by: String,
+    pub grid_sparks_by: String,
+    pub grid_warp_by: String,
 
     // generative geometry
     pub gen_symmetry: u32,
@@ -218,6 +257,14 @@ pub struct Settings {
     pub gen_spin: f64,
     pub gen_flow: f64,
     pub gen_glow: f64,
+    /// What throws the polygons (`SOURCES`), what turns the rings and
+    /// shimmers their edges (`DRIVES`), whether every ring swells with the
+    /// bass, and how many bars between mutations.
+    pub gen_polygon_source: String,
+    pub gen_spin_by: String,
+    pub gen_shimmer_by: String,
+    pub gen_unison: bool,
+    pub gen_mutate_bars: u32,
 
     // effects, each 0 for off
     pub fx_bloom: f64,
@@ -263,6 +310,7 @@ impl Default for Settings {
             palette: "plasma".into(),
             palette_per_mode: true,
             mode_palettes: ["plasma".into(), "plasma".into(), "nsku".into(), "plasma".into()],
+            reactions: Default::default(),
             tint_strength: 0.55,
             image_palette: Vec::new(),
             custom_palette: ["#1a1446".into(), "#ff3d7f".into(), "#ffe53b".into()],
@@ -305,6 +353,10 @@ impl Default for Settings {
             grid_analyser: false,
             grid_tilt: 0.3,
             grid_color: 0.8,
+            grid_wave_source: "kick".into(),
+            grid_twist_by: "mids".into(),
+            grid_sparks_by: "highs".into(),
+            grid_warp_by: "lows".into(),
             gen_symmetry: 6,
             gen_complexity: 0.7,
             gen_trails: 0.6,
@@ -313,6 +365,11 @@ impl Default for Settings {
             gen_spin: 1.0,
             gen_flow: 1.0,
             gen_glow: 1.0,
+            gen_polygon_source: "beat".into(),
+            gen_spin_by: "mids".into(),
+            gen_shimmer_by: "highs".into(),
+            gen_unison: false,
+            gen_mutate_bars: 1,
             fx_bloom: 0.35,
             fx_threshold: 0.6,
             fx_flash: 0.6,
@@ -335,6 +392,15 @@ impl Default for Settings {
 
 impl Settings {
     /// The palette the current mode wears.
+    /// How the visualization on stage listens.
+    pub fn reaction(&self) -> &Reaction {
+        &self.reactions[self.viz_mode.index()]
+    }
+
+    pub fn reaction_mut(&mut self) -> &mut Reaction {
+        &mut self.reactions[self.viz_mode.index()]
+    }
+
     pub fn active_palette(&self) -> &str {
         if self.palette_per_mode {
             &self.mode_palettes[self.viz_mode.index()]

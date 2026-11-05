@@ -45,7 +45,7 @@ fn every_visual_control_reaches_the_renderer() {
         changes_the_picture(Mode::PointCloud, name, change);
     }
 
-    let grid: [(&str, Change); 15] = [
+    let grid: [(&str, Change); 19] = [
         ("columns", |s| s.grid_cols = 60),
         ("feature size", |s| s.grid_noise = 12.0),
         ("warp", |s| s.grid_warp = 2.0),
@@ -61,12 +61,16 @@ fn every_visual_control_reaches_the_renderer() {
         ("tilt", |s| s.grid_tilt = 0.9),
         ("colour", |s| s.grid_color = 0.1),
         ("sensitivity", |s| s.sensitivity = 2.0),
+        ("shock waves fire on", |s| s.grid_wave_source = "snare".into()),
+        ("twist follows", |s| s.grid_twist_by = "highs".into()),
+        ("sparks follow", |s| s.grid_sparks_by = "lows".into()),
+        ("warp follows", |s| s.grid_warp_by = "loudness".into()),
     ];
     for (name, change) in grid {
         changes_the_picture(Mode::HidingGrid, name, change);
     }
 
-    let generative: [(&str, Change); 10] = [
+    let generative: [(&str, Change); 15] = [
         ("symmetry", |s| s.gen_symmetry = 9),
         ("complexity", |s| s.gen_complexity = 0.1),
         ("trails", |s| s.gen_trails = 0.95),
@@ -77,13 +81,23 @@ fn every_visual_control_reaches_the_renderer() {
         ("glow", |s| s.gen_glow = 2.0),
         ("mid reactivity", |s| s.pc_mid_gain = 2.5),
         ("high reactivity", |s| s.pc_high_gain = 2.5),
+        ("polygons fire on", |s| s.gen_polygon_source = "hats".into()),
+        ("spin follows", |s| s.gen_spin_by = "off".into()),
+        ("shimmer follows", |s| s.gen_shimmer_by = "mids".into()),
+        ("every ring swells with the bass", |s| s.gen_unison = true),
+        ("mutate every", |s| s.gen_mutate_bars = 4),
     ];
     for (name, change) in generative {
         changes_the_picture(Mode::Generative, name, change);
     }
 
-    // colours and effects reach every mode
-    let everywhere: [(&str, Change); 13] = [
+    // colours, effects and the Motion tab's reactions reach every mode
+    let everywhere: [(&str, Change); 18] = [
+        ("auto level", |s| s.reaction_mut().auto_level = true),
+        ("dynamics", |s| s.reaction_mut().dynamics = -0.6),
+        ("rise", |s| s.reaction_mut().rise = 0.5),
+        ("fall", |s| s.reaction_mut().fall = 0.5),
+        ("hits on", |s| s.reaction_mut().hits = "half".into()),
         ("palette", |s| s.set_palette("turbo")),
         ("tint strength", |s| s.tint_strength = 0.1),
         ("custom palette", |s| {
@@ -130,6 +144,17 @@ fn the_head_effect_is_the_depth_point_clouds_alone() {
     for name in nv_ui::state::PC_EFFECTS {
         assert_eq!(nv_render::HeadEffect::from_name(name).name(), name);
     }
+}
+
+#[test]
+fn each_visualization_keeps_its_own_reaction() {
+    let mut s = Settings { viz_mode: Mode::HidingGrid, ..Settings::default() };
+    s.reaction_mut().dynamics = 0.8;
+    s.viz_mode = Mode::Generative;
+    assert_eq!(s.reaction().dynamics, 0.0, "the grid's reaction leaked into the geometry");
+    assert_eq!(params_from(&s).react, nv_render::ReactKnobs::default());
+    s.viz_mode = Mode::HidingGrid;
+    assert_eq!(params_from(&s).react.dynamics, 0.8);
 }
 
 #[test]

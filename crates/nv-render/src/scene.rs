@@ -15,6 +15,7 @@ use crate::grid_render::GridRenderer;
 use crate::head_fx::{HeadFx, HeadShape};
 use crate::motion::{BustMotion, Knobs};
 use crate::post::{PostEnvelopes, PostFx, PostKnobs};
+use crate::react::{ReactKnobs, Reactor};
 use crate::renderer::{
     camera_eye, lens, view_proj_lens, BustRenderer, Camera, Uniforms, RING_SCALE,
 };
@@ -40,6 +41,8 @@ pub struct Params {
     pub grid: Option<GridKnobs>,
     /// `Some` when the Generative Geometry is.
     pub generative: Option<GenKnobs>,
+    /// How the mode on stage listens: the Motion tab's per-mode shaping.
+    pub react: ReactKnobs,
 }
 
 impl Default for Params {
@@ -52,6 +55,7 @@ impl Default for Params {
             band_push: 0.0,
             grid: None,
             generative: None,
+            react: ReactKnobs::default(),
         }
     }
 }
@@ -66,6 +70,7 @@ pub struct Scene {
     post: PostFx,
     envelopes: PostEnvelopes,
     motion: BustMotion,
+    reactor: Reactor,
     head_fx: HeadFx,
     rings: RingField,
     uniforms: Uniforms,
@@ -89,6 +94,7 @@ impl Scene {
             post: PostFx::new(device, format),
             envelopes: PostEnvelopes::default(),
             motion: BustMotion::default(),
+            reactor: Reactor::default(),
             head_fx: HeadFx::new(HeadShape::of(model), 11),
             rings: RingField::default(),
             uniforms: Uniforms::default(),
@@ -119,6 +125,9 @@ impl Scene {
         params: &Params,
         camera: Camera,
     ) {
+        // the mode hears the music as its Motion settings shape it
+        let (shaped, beat) = self.reactor.shape(frame, beat, dt, &params.react);
+        let frame = &shaped;
         let knobs = params.knobs;
         self.motion.update(frame, dt, beat, knobs, &mut self.uniforms);
         // only the head has a head effect

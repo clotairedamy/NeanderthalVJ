@@ -6,7 +6,42 @@ pub mod motion;
 pub mod source;
 pub mod visuals;
 
+use ads::ui::SegOption;
 use dioxus::prelude::*;
+
+/// The menu of what can fire an event, in plain words.
+pub fn source_options() -> Vec<SegOption> {
+    crate::state::SOURCES
+        .iter()
+        .map(|v| {
+            let label = match *v {
+                "kick" => "Kick",
+                "snare" => "Snare and claps",
+                "hats" => "Hats and cymbals",
+                "any" => "Any hit",
+                _ => "The beat",
+            };
+            SegOption::new(label, *v)
+        })
+        .collect()
+}
+
+/// The menu of what part of the music can drive a movement.
+pub fn drive_options() -> Vec<SegOption> {
+    crate::state::DRIVES
+        .iter()
+        .map(|v| {
+            let label = match *v {
+                "lows" => "Lows",
+                "mids" => "Mids",
+                "highs" => "Highs",
+                "loudness" => "Overall loudness",
+                _ => "Nothing (held still)",
+            };
+            SegOption::new(label, *v)
+        })
+        .collect()
+}
 
 /// A titled group of controls — the Qt `QGroupBox` this port replaces.
 ///

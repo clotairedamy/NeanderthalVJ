@@ -27,6 +27,7 @@ use nannou_core::rand::rand::{RngExt, SeedableRng};
 use nv_audio::AnalysisFrame;
 
 use crate::noise::{perlin3, Permutation};
+use crate::react::{Drive, Source};
 
 /// What the grid's shader reads.
 #[repr(C)]
@@ -132,6 +133,12 @@ pub struct GridKnobs {
     /// The frame's width over its height: the wall is laid out to fill
     /// it, whatever its shape.
     pub aspect: f32,
+    /// What fires a shock wave. `Kick` also fires on the beat grid.
+    pub wave_source: Source,
+    /// What turns the squares, strikes the sparks and warps the lattice.
+    pub twist_by: Drive,
+    pub sparks_by: Drive,
+    pub warp_by: Drive,
 }
 
 impl Default for GridKnobs {
@@ -155,6 +162,10 @@ impl Default for GridKnobs {
             color: 0.8,
             colors: [[1.0, 0.35, 0.2], [0.35, 0.6, 1.0], [0.95, 0.95, 1.0]],
             aspect: 1.0,
+            wave_source: Source::Kick,
+            twist_by: Drive::Mids,
+            sparks_by: Drive::Highs,
+            warp_by: Drive::Lows,
         }
     }
 }
@@ -181,7 +192,9 @@ pub struct HidingGrid {
     since_wave: f32,
     side: bool,
     mids: f32,
+    /// What strikes the sparks, and what turns the squares, smoothed.
     highs: f32,
+    twist_lvl: f32,
     /// Two triangles per cell, over four vertices of its own.
     pub quads: Vec<GridVertex>,
     /// The lattice, as line segments.
@@ -204,6 +217,7 @@ impl Default for HidingGrid {
             side: false,
             mids: 0.0,
             highs: 0.0,
+            twist_lvl: 0.0,
             quads: Vec::new(),
             lines: Vec::new(),
         }
@@ -293,9 +307,11 @@ impl HidingGrid {
         };
         let bass = band(0, 2);
         let mids = band(2, 5);
-        let highs = band(5, 7);
+        // what the panel has turning, sparking and warping the wall
+        let driven = |d: Drive| (d.level(frame) * sens).clamp(0.0, 1.5);
         self.mids += (mids - self.mids) * (dt * 10.0).min(1.0);
-        self.highs += (highs - self.highs) * (dt * 14.0).min(1.0);
+        self.twist_lvl += (driven(k.twist_by) - self.twist_lvl) * (dt * 10.0).min(1.0);
+        self.highs += (driven(k.sparks_by) - self.highs) * (dt * 14.0).min(1.0);
 
         // a beat swells every square; a kick pulls them back in, so the
         // grid breathes rather than only growing
@@ -311,7 +327,13 @@ impl HidingGrid {
         // the lows strike the wall: a wave per kick, not per frame of it
         self.since_wave += dt;
         let on_beat = if beat { frame.beat_strength as f32 * 0.8 } else { 0.0 };
-        let kick = (frame.attack[0].max(frame.attack[1]) as f32 * sens).max(on_beat);
+        // the kick also answers the beat grid, so a track whose kick the
+        // transients miss still strikes the wall
+        let kick = match k.wave_source {
+            Source::Beat => on_beat,
+            Source::Kick => (Source::Kick.level(frame, beat) * sens).max(on_beat),
+            other => other.level(frame, beat) * sens,
+        };
         if k.waves > 0.0 && kick > 0.3 && self.since_wave > 0.11 {
             self.since_wave = 0.0;
             let origin = match k.impact {
@@ -344,7 +366,7 @@ impl HidingGrid {
         self.t += dt * (k.flow * (0.35 + 1.4 * frame.rms as f32 + 0.8 * self.mids));
 
         // the low-frequency band of the field warps the lattice
-        let want = 0.55 + 1.1 * bass;
+        let want = 0.55 + 1.1 * driven(k.warp_by);
         self.warp_amt += (want - self.warp_amt) * (dt * 6.0).min(1.0);
         let wa = self.warp_amt.clamp(0.0, 2.5) * k.warp;
         let ns = k.noise;
@@ -471,7 +493,7 @@ impl HidingGrid {
 
                 // the mids turn each square about its centre, each its own
                 // way, so the wall shimmers between order and disorder
-                let angle = k.twist * self.mids * fine * 2.6;
+                let angle = k.twist * self.twist_lvl * fine * 2.6;
                 let (sa, ca) = angle.sin_cos();
                 let mid = (lo + hi) * 0.5;
                 let turn = |u: f32, v: f32| {

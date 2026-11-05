@@ -21,8 +21,8 @@ use std::sync::{Arc, Mutex};
 use dioxus::desktop::window;
 use dioxus::prelude::*;
 use nv_render::{
-    bust::BustModel, motion::Knobs, palette, Camera, GenKnobs, GridKnobs, HeadEffect, Impact,
-    Params, PostKnobs, Scene,
+    bust::BustModel, motion::Knobs, palette, Camera, Division, Drive, GenKnobs, GridKnobs,
+    HeadEffect, Impact, Params, PostKnobs, ReactKnobs, Scene, Source,
 };
 
 use crate::state::{Mode, Settings};
@@ -187,6 +187,10 @@ pub fn params_from(g: &Settings) -> Params {
             colors: [at(0.15), at(0.55), at(0.95)],
             // the scene sets the frame's real shape as it draws
             aspect: 1.0,
+            wave_source: Source::from_name(&g.grid_wave_source),
+            twist_by: Drive::from_name(&g.grid_twist_by, Drive::Mids),
+            sparks_by: Drive::from_name(&g.grid_sparks_by, Drive::Highs),
+            warp_by: Drive::from_name(&g.grid_warp_by, Drive::Lows),
         }),
         generative: (mode == Mode::Generative).then(|| GenKnobs {
             symmetry: g.gen_symmetry,
@@ -201,7 +205,22 @@ pub fn params_from(g: &Settings) -> Params {
             spin: g.gen_spin as f32,
             flow: g.gen_flow as f32,
             glow: g.gen_glow as f32,
+            polygon_source: Source::from_name(&g.gen_polygon_source),
+            spin_by: Drive::from_name(&g.gen_spin_by, Drive::Mids),
+            shimmer_by: Drive::from_name(&g.gen_shimmer_by, Drive::Highs),
+            unison: g.gen_unison,
+            mutate_bars: g.gen_mutate_bars.max(1),
         }),
+        react: {
+            let r = g.reaction();
+            ReactKnobs {
+                auto_level: r.auto_level,
+                dynamics: r.dynamics as f32,
+                rise: r.rise as f32,
+                fall: r.fall as f32,
+                division: Division::from_name(&r.hits),
+            }
+        },
     }
 }
 

@@ -203,6 +203,12 @@ with what you ran and what the terminal printed.
   and reloaded. The last session comes back at the next launch.
 - **Colours**: a palette per mode, the colours pulled from any picture
   (pick one or drop it on the window), or three picked by hand.
+- **Reactions**: the Motion tab sets how each visualization listens, on
+  its own: auto level for quiet or loud masters, dynamics that lift the
+  quiet parts or wait for the peaks, rise and fall times, and hits on
+  every beat, half-time or once a bar. The Hiding Grid and the Generative
+  Geometry can also be rewired: which part of the kit fires the shock
+  waves or the polygons, and what turns, sparks, warps and shimmers.
 - **Effects** over every mode, exports included: bloom, a flash on the
   beat, film grain on the drums, a colour split on kicks, a ghost echo and
   a vignette.
