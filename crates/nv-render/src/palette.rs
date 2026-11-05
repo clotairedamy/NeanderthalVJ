@@ -34,6 +34,54 @@ pub fn stops(name: &str) -> Vec<[f32; 3]> {
         "neon" => {
             [0x00_F5_FF, 0x7A_2B_FF, 0xFF_2B_8A, 0xFF_E5_3B].iter().map(|h| srgb(*h)).collect()
         }
+        "dusk" => [0x2B_10_55, 0x7B_2C_BF, 0xE0_45_7B, 0xFF_7B_54, 0xFF_B2_6B]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "candy" => [0x72_09_B7, 0xF7_25_85, 0xFF_5D_8F, 0x4C_C9_F0, 0x43_61_EE]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "flamingo" => [0x5C_0A_4E, 0xB5_17_9E, 0xFF_4D_6D, 0xFF_8F_A3, 0xFF_B4_A2]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "orchid" => [0x3C_09_6C, 0x7B_2C_BF, 0xC7_7D_FF, 0xFF_6A_D5, 0xFF_B3_F0]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "sakura" => [0x6B_0F_3A, 0xD8_11_59, 0xFF_5D_8F, 0xFF_97_B7, 0xFF_C4_D6]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "berry" => [0x59_0D_22, 0x80_0F_2F, 0xC9_18_4A, 0xFF_4D_6D, 0xFF_8F_A3]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "midnight" => [0x10_00_2B, 0x3C_18_74, 0x6A_2C_70, 0xB8_3B_5E, 0xF0_8A_5D]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "lava" => [0x3D_0C_11, 0x9D_02_08, 0xE0_1E_37, 0xFF_5E_5B, 0xFF_9E_80]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "electric" => [0x3A_0C_A3, 0x43_61_EE, 0x72_09_B7, 0xF7_25_85, 0xFF_00_6E]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "infrared" => [0x37_06_17, 0x9D_02_08, 0xFF_00_54, 0xFF_20_6E, 0xFF_70_A6]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "coral" => [0x7A_0A_14, 0xC1_12_1F, 0xFF_4D_4D, 0xFF_7F_50, 0xFF_A0_7A]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
+        "ultraviolet" => [0x24_00_46, 0x3C_09_6C, 0x7B_2C_BF, 0xB1_00_E8, 0xE5_00_A4]
+            .iter()
+            .map(|h| srgb(*h))
+            .collect(),
         "inferno" => [0x00_00_04, 0x42_0A_68, 0x93_26_67, 0xDD_51_3A, 0xFC_A5_0A, 0xFC_FF_A4]
             .iter()
             .map(|h| srgb(*h))
@@ -239,6 +287,18 @@ mod named_palettes {
             "gold",
             "rose",
             "forest",
+            "dusk",
+            "candy",
+            "flamingo",
+            "orchid",
+            "sakura",
+            "berry",
+            "midnight",
+            "lava",
+            "electric",
+            "infrared",
+            "coral",
+            "ultraviolet",
         ];
         for (i, a) in names.iter().enumerate() {
             assert_ne!(stops(a), stops("nsku"), "{a} fell back to the default");

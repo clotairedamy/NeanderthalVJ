@@ -61,26 +61,35 @@ pub fn mode_for_key(key: &str) -> Option<Mode> {
 
 /// The palettes on offer: the named ones, then the one pulled from an
 /// image and the one picked by hand.
-pub const PALETTES: [&str; 21] = [
+/// The palettes the menu offers, then the two chosen on purpose. Older
+/// ones (viridis, ocean, aurora, ice, gold, forest, acid) still render for
+/// saved looks that name them, but are no longer offered: they leaned too
+/// hard on greens, teals and golds.
+pub const PALETTES: [&str; 26] = [
     "nsku",
-    "viridis",
     "plasma",
-    "turbo",
     "neon",
-    "mono",
-    "inferno",
-    "magma",
-    "sunset",
-    "ocean",
-    "aurora",
+    "dusk",
+    "candy",
+    "flamingo",
+    "orchid",
+    "sakura",
+    "berry",
+    "midnight",
+    "coral",
+    "lava",
+    "ultraviolet",
+    "electric",
+    "infrared",
     "vaporwave",
     "cyberpunk",
+    "sunset",
+    "magma",
+    "inferno",
     "fire",
-    "ice",
-    "acid",
-    "gold",
     "rose",
-    "forest",
+    "turbo",
+    "mono",
     "image",
     "custom",
 ];
