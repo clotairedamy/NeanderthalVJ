@@ -100,11 +100,8 @@ fn fs_composite(in : Full) -> Out {
     // where the head is, when the stage marked it: 1 on it, 0 off it
     let head = post.protect * (1.0 - textureSample(t0, smp, suv).a);
 
-    // the colour split: red and blue pulled apart along the radius. Not
-    // inside the head: there it split each of the face's tiny dots into a
-    // red, a green and a blue one, and the face looked torn. Its outline,
-    // and everything around it, still fringe.
-    let off = d * post.chroma * 0.012 * post.rect.zw * (1.0 - head);
+    // the colour split: red and blue pulled apart along the radius
+    let off = d * post.chroma * 0.012 * post.rect.zw;
     var col = vec3<f32>(
         textureSample(t0, smp, suv + off).r,
         textureSample(t0, smp, suv).g,

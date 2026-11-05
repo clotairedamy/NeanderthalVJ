@@ -118,7 +118,8 @@ fn main() {
     if let Ok(name) = std::env::var("NV_PALETTE") {
         let at = |t: f32| nv_render::palette::sample(&name, t);
         params.knobs.tint = at(0.62);
-        params.knobs.tint_mix = 0.75;
+        params.knobs.tint_mix =
+            std::env::var("NV_TINT").ok().and_then(|v| v.parse().ok()).unwrap_or(0.75);
         if let Some(g) = params.grid.as_mut() {
             g.colors = [at(0.15), at(0.55), at(0.95)];
         }
