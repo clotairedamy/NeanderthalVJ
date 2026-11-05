@@ -236,6 +236,9 @@ pub struct BustRenderer {
     shell_idx: wgpu::Buffer,
     depth: wgpu::TextureView,
     n_particles: u32,
+    /// `[vertices, instances, first vertex, first instance]` for the
+    /// particles' indirect draw, counted by the compute pass.
+    draw_args: wgpu::Buffer,
     n_indices: u32,
     ring_pipeline: wgpu::RenderPipeline,
     ring_buf: wgpu::Buffer,
@@ -334,23 +337,43 @@ impl BustRenderer {
             usage: wgpu::BufferUsages::STORAGE,
             mapped_at_creation: false,
         });
-        let sprite_group = |binding: u32, stage: wgpu::ShaderStages, read_only: bool| {
-            let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("sprites"),
-                entries: &[storage_entry(binding, stage, read_only)],
-            });
-            let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("sprites"),
-                layout: &layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding,
-                    resource: sprite_buf.as_entire_binding(),
-                }],
-            });
-            (layout, group)
-        };
-        let (out_layout, sprite_out) = sprite_group(0, wgpu::ShaderStages::COMPUTE, false);
-        let (in_layout, sprite_in) = sprite_group(1, wgpu::ShaderStages::VERTEX, true);
+        // the draw's arguments, filled in by the compute pass: only the
+        // sprites that will show are drawn
+        let draw_args = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("sprite draw"),
+            size: 16,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::INDIRECT
+                | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let out_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("sprites out"),
+            entries: &[
+                storage_entry(0, wgpu::ShaderStages::COMPUTE, false),
+                storage_entry(2, wgpu::ShaderStages::COMPUTE, false),
+            ],
+        });
+        let sprite_out = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("sprites out"),
+            layout: &out_layout,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: sprite_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: draw_args.as_entire_binding() },
+            ],
+        });
+        let in_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("sprites in"),
+            entries: &[storage_entry(1, wgpu::ShaderStages::VERTEX, true)],
+        });
+        let sprite_in = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("sprites in"),
+            layout: &in_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 1,
+                resource: sprite_buf.as_entire_binding(),
+            }],
+        });
 
         let sprite_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("bust sprites"),
@@ -510,6 +533,7 @@ impl BustRenderer {
             shell_idx,
             depth: make_depth(device, size),
             n_particles: model.particles.len() as u32,
+            draw_args,
             n_indices: model.indices.len() as u32,
             ring_pipeline,
             ring_buf,
@@ -626,6 +650,8 @@ impl BustRenderer {
         let mut enc =
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("bust") });
         if other.is_none() && self.n_particles > 0 {
+            // no sprites yet, one instance; the compute pass counts them in
+            queue.write_buffer(&self.draw_args, 0, bytemuck::cast_slice(&[0u32, 1, 0, 0]));
             let mut cpass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("bust sprites"),
                 timestamp_writes: None,
@@ -694,7 +720,7 @@ impl BustRenderer {
                 // then the particles, six vertices each
                 pass.set_pipeline(&self.particle_pipeline);
                 pass.set_bind_group(1, &self.sprite_in, &[]);
-                pass.draw(0..self.n_particles * 6, 0..1);
+                pass.draw_indirect(&self.draw_args, 0);
             }
         }
         queue.submit([enc.finish()]);

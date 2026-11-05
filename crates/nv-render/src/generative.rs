@@ -394,7 +394,7 @@ impl Generative {
         }
         // normalised, so every shape fits its ring whatever its numbers
         let base: f32 = map_range(i as f32, 0.0, (n.max(2) - 1) as f32, 0.16, 0.86);
-        let scale = base * (1.0 + 0.32 * e + 0.12 * f) / max.max(1e-6);
+        let scale = base * (1.0 + 0.5 * e + 0.25 * f) / max.max(1e-6);
         let shimmer = 0.045 * self.shimmer * (0.4 + i as f32 / n as f32);
         out.clear();
         for (j, r) in rs.iter().enumerate() {
@@ -419,7 +419,7 @@ impl Generative {
         let f = t - a as f32;
         let (c0, c1) = (k.colors[a], k.colors[a + 1]);
         let (energy, flash) = self.level_of(i);
-        let lift = 0.25 + 0.9 * energy + 1.0 * flash;
+        let lift = 0.25 + 1.2 * energy + 1.4 * flash;
         [
             (c0[0] + (c1[0] - c0[0]) * f) * lift,
             (c0[1] + (c1[1] - c0[1]) * f) * lift,
@@ -443,7 +443,7 @@ impl Generative {
             self.ring(i, n, &mut pts);
             let color = self.color(i, n, k);
             let (e, f) = self.level_of(i);
-            let width = (1.4 + 4.5 * e + 3.0 * f) * px;
+            let width = (1.4 + 6.0 * e + 4.5 * f) * px;
             ribbon(&pts, true, width, color, fit, out);
             // a faint echo inside each ring gives it depth
             let echo: Vec<Vec2> = pts.iter().map(|p| *p * 0.94).collect();

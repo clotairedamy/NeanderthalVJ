@@ -65,6 +65,9 @@ pub struct StageShared {
     /// How fast the camera orbits on its own, as f32 bits; 0 for not.
     pub orbit: AtomicU32,
     pub stop: AtomicBool,
+    /// The window is minimized or hidden: nobody can see a frame, so none
+    /// is drawn. The music and the clock carry on.
+    pub hidden: AtomicBool,
 }
 
 impl StageShared {
@@ -301,6 +304,13 @@ fn render_loop(
     let mut next_frame = std::time::Instant::now();
 
     while !shared.stop.load(Ordering::Relaxed) {
+        // minimized or hidden: draw nothing, and check again shortly
+        if shared.hidden.load(Ordering::Relaxed) {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            last = std::time::Instant::now();
+            next_frame = last;
+            continue;
+        }
         // follow the window and the stage
         if let Some(l) = *shared.layout.lock().unwrap() {
             let (w, h) = (l.surface.0.max(1), l.surface.1.max(1));
@@ -449,6 +459,18 @@ pub fn use_stage(shared: StageHandle, settings: Signal<Settings>) {
                 eprintln!("visualizer: could not start the render thread: {e}");
                 return;
             }
+
+            // a few times a second, whether anyone can see the window: a
+            // minimized or hidden one is not drawn at all
+            let watch = shared.clone();
+            let watched = win.clone();
+            spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+                    let hidden = watched.is_minimized() || !watched.is_visible();
+                    watch.hidden.store(hidden, Ordering::Relaxed);
+                }
+            });
 
             // `NV_TEST_FULLSCREEN=1` toggles real fullscreen every few
             // seconds: the transition that used to fault the whole app.

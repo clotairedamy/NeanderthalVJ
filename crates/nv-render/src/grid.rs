@@ -199,6 +199,9 @@ pub struct HidingGrid {
     pub quads: Vec<GridVertex>,
     /// The lattice, as line segments.
     pub lines: Vec<GridVertex>,
+    /// The warped nodes and the waves' light on them, reused every frame.
+    nodes: Vec<Vec3>,
+    crests: Vec<f32>,
 }
 
 impl Default for HidingGrid {
@@ -220,6 +223,8 @@ impl Default for HidingGrid {
             twist_lvl: 0.0,
             quads: Vec::new(),
             lines: Vec::new(),
+            nodes: Vec::new(),
+            crests: Vec::new(),
         }
     }
 }
@@ -316,7 +321,7 @@ impl HidingGrid {
         // a beat swells every square; a kick pulls them back in, so the
         // grid breathes rather than only growing
         if beat {
-            self.swell_v += frame.beat_strength as f32 * k.beat * k.beat_impulse * 1.6;
+            self.swell_v += frame.beat_strength as f32 * k.beat * k.beat_impulse * 2.4;
         }
         self.swell_v -= frame.punch as f32 * k.beat * 0.8 * dt * 16.0;
         // a spring back to 1: accelerate toward the target, with friction
@@ -352,7 +357,7 @@ impl HidingGrid {
             if self.waves.len() == MAX_WAVES {
                 self.waves.remove(0);
             }
-            self.waves.push(Wave { origin, radius: 0.0, amp: kick.min(1.2) * k.waves });
+            self.waves.push(Wave { origin, radius: 0.0, amp: kick.min(1.2) * 1.4 * k.waves });
         }
         let speed = 1.25 * k.wave_speed.max(0.05);
         for w in &mut self.waves {
@@ -366,7 +371,7 @@ impl HidingGrid {
         self.t += dt * (k.flow * (0.35 + 1.4 * frame.rms as f32 + 0.8 * self.mids));
 
         // the low-frequency band of the field warps the lattice
-        let want = 0.55 + 1.1 * driven(k.warp_by);
+        let want = 0.5 + 1.6 * driven(k.warp_by);
         self.warp_amt += (want - self.warp_amt) * (dt * 6.0).min(1.0);
         let wa = self.warp_amt.clamp(0.0, 2.5) * k.warp;
         let ns = k.noise;
@@ -417,8 +422,14 @@ impl HidingGrid {
         let unit = aspect.max(1.0);
 
         // warped and struck node positions, and the light of the waves
-        let mut nodes = vec![Vec3::ZERO; n * rows];
-        let mut crests = vec![0.0f32; n * rows];
+        // kept between frames: allocating them anew cost a frame's worth of
+        // page faults on a fine wall
+        let mut nodes = std::mem::take(&mut self.nodes);
+        let mut crests = std::mem::take(&mut self.crests);
+        nodes.clear();
+        nodes.resize(n * rows, Vec3::ZERO);
+        crests.clear();
+        crests.resize(n * rows, 0.0);
         for row in 0..rows {
             for col in 0..n {
                 let gx = x0 + cell * col as f32;
@@ -476,7 +487,7 @@ impl HidingGrid {
                 let lit =
                     if k.analyser && up < reach { 1.0 - 0.5 * up / (reach + 1e-4) } else { 0.0 };
                 // sparks: a few cells flash with the highs
-                let chance = self.highs * self.highs * 0.06 * k.sparkle;
+                let chance = self.highs * self.highs * 0.1 * k.sparkle;
                 let spark =
                     if hash(col as f32 + spark_clock * 0.37, row as f32 + spark_clock) < chance {
                         1.0
@@ -493,7 +504,7 @@ impl HidingGrid {
 
                 // the mids turn each square about its centre, each its own
                 // way, so the wall shimmers between order and disorder
-                let angle = k.twist * self.twist_lvl * fine * 2.6;
+                let angle = k.twist * self.twist_lvl * fine * 3.6;
                 let (sa, ca) = angle.sin_cos();
                 let mid = (lo + hi) * 0.5;
                 let turn = |u: f32, v: f32| {
@@ -541,5 +552,7 @@ impl HidingGrid {
                 self.lines.push(line((row + 1) * n + col));
             }
         }
+        self.nodes = nodes;
+        self.crests = crests;
     }
 }

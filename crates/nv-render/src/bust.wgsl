@@ -103,6 +103,23 @@ struct Sprite {
 @group(1) @binding(0) var<storage, read_write> sprites_out : array<Sprite>;
 @group(1) @binding(1) var<storage, read> sprites : array<Sprite>;
 
+// The draw call's own arguments. Each sprite that will show claims the next
+// slot, so the draw covers only those: culled particles -- the far side of
+// the head, the thinned-out ones -- cost nothing after this pass.
+struct DrawArgs {
+    vertex_count   : atomic<u32>,
+    instance_count : u32,
+    first_vertex   : u32,
+    first_instance : u32,
+};
+@group(1) @binding(2) var<storage, read_write> draw_args : DrawArgs;
+
+fn emit(sp : Sprite) {
+    if (sp.radius <= 0.0) { return; }
+    let slot = atomicAdd(&draw_args.vertex_count, 6u) / 6u;
+    sprites_out[slot] = sp;
+}
+
 fn hash(n : f32) -> f32 { return fract(sin(n) * 43758.5453123); }
 fn hash3(c : vec3<f32>) -> f32 { return hash(dot(c, vec3<f32>(1.0, 57.0, 113.0))); }
 
@@ -449,7 +466,7 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     if (u.fx.x > 0.5 && dot(n, normalize(u.eye.xyz - p)) < -0.4) {
         let e = effect_dot(a_rnd, p, n, part.pos, zone);
         if (e.w != 0.0) {
-            sprites_out[pi] = effect_sprite(e.xyz, max(e.w, 0.0), a_rnd);
+            emit(effect_sprite(e.xyz, max(e.w, 0.0), a_rnd));
             return;
         }
     }
@@ -595,7 +612,9 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     let crest = ripple(u.wave0, wd) + ripple(u.wave1, wd) + ripple(u.wave2, wd);
 
     var lum = (0.012 + 0.78 * lam) * part.fade * u.bright;
-    lum = lum + crest * (0.35 + 0.9 * lam);
+    // the Depth Point Cloud answers harder: a brighter crest on the beat
+    let punchy = select(1.0, 1.45, dpc);
+    lum = lum + crest * (0.35 + 0.9 * lam) * punchy;
 
     // the rings' light: in the Depth Point Cloud across the face, stronger
     // toward the outline; in Synth Cloud on the outline, and the grains
@@ -613,12 +632,18 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
     }
 
     lum = lum * (0.55 + 0.75 * hash(a_rnd * 71.3));          // uneven grain
-    lum = lum * (1.0 + 0.8 * u.low * w_low + 0.5 * u.mid * w_mid);
+    if (dpc) {
+        // the bass and mids light their regions harder, and every kick
+        // pumps the whole head, falling away with its crest
+        lum = lum * (1.0 + 1.25 * u.low * w_low + 0.85 * u.mid * w_mid) * (1.0 + 0.35 * u.wave0.y);
+    } else {
+        lum = lum * (1.0 + 0.8 * u.low * w_low + 0.5 * u.mid * w_mid);
+    }
     // the song's shape: dim through a breakdown, full on the drop
     lum = lum * u.meter.z * (1.0 + u.meter.w);
     lum = lum * (1.0 + 1.6 * band_e) + lifted * 0.6 * part.fade;
     let tw = step(0.965, fract(a_rnd * 13.7 + u.time * 2.3));
-    lum = lum + w_high * u.high * tw * lam * 1.2;            // highs glitter
+    lum = lum + w_high * u.high * tw * lam * 1.2 * punchy;   // highs glitter
 
     // Facet flash: on a drum hit the head turns for a moment into a cut crystal
     // -- flat-lit facets with glowing cut lines, cut afresh every hit --
@@ -693,7 +718,7 @@ fn cs_particles(@builtin(global_invocation_id) gid : vec3<u32>) {
         sp.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
         sp.radius = 0.0;
     }
-    sprites_out[pi] = sp;
+    emit(sp);
 }
 
 struct VsOut {
