@@ -13,6 +13,8 @@ pub mod shell;
 pub mod stage;
 pub mod state;
 pub mod store;
+#[cfg(all(target_os = "macos", feature = "syphon"))]
+pub mod syphon;
 
 use dioxus::html::HasFileData;
 use dioxus::prelude::*;

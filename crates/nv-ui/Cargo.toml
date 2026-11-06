@@ -29,5 +29,22 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 midir = "0.10"
 
+[features]
+# Syphon output on a Mac: `cargo run --release -p nv-ui --features syphon`.
+# Optional, because Syphon is compiled from source and that needs full Xcode
+# with its Metal Toolchain, not just the Command Line Tools the normal
+# build needs.
+syphon = ["dep:syphon-rs", "dep:metal", "dep:objc2", "dep:objc2-metal"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+syphon-rs = { version = "0.2", features = ["vendored"], optional = true }
+metal = { version = "0.29", optional = true }
+objc2 = { version = "0.6", optional = true }
+objc2-metal = { version = "0.3", features = ["MTLTexture"], optional = true }
+
+[[example]]
+name = "syphon_check"
+required-features = ["syphon"]
+
 [dev-dependencies]
 dioxus-ssr = "=0.7.9"

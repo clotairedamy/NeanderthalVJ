@@ -201,6 +201,7 @@ fn the_other_settings_have_a_home() {
         ("input_device, input_gain_db, input_gate_db", "engine: start_live, set_live_levels"),
         ("auto_switch_sections, auto_switch_bars, auto_switch_drops", "engine_link: AutoSwitch"),
         ("show_level", "shell: StatusBar"),
+        ("syphon", "stage: the render thread's Syphon output (the `syphon` feature)"),
         ("performance", "lib: Workspace hides the controls"),
         ("frame_rate", "stage: the render thread's pacing"),
         ("export_fps, export_quality, export_start, export_length", "export panel: Job"),

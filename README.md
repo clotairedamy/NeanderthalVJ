@@ -3,8 +3,10 @@
 **An open-source, audio-reactive visualizer and VJ tool, written in Rust.**
 Play a track or plug in a live source, and the visuals follow the music
 frame by frame: the bass, the mids and the highs, every kick, the beat and
-the bar. Perform with it live from the keyboard or any MIDI controller, and
-export what you see as an Instagram-ready video.
+the bar. Perform with it live from the keyboard or any MIDI controller,
+send it live into Resolume, VDMX, MadMapper or OBS through
+[Syphon](#live-output-with-syphon-mac), and export what you see as an
+Instagram-ready video.
 
 It started life as a Python app and was rebuilt in Rust for tighter
 reactivity and performance: 420,000 particles at 120 fps, drawn on the GPU
@@ -299,6 +301,50 @@ with what you ran and what the terminal printed.
   a vignette.
 
 Every control in the panels has a line under it saying what it does.
+
+### Live output with Syphon (Mac)
+
+[Syphon](https://syphon.github.io) shares video between apps on the same
+Mac in real time, straight from the graphics card, with no capture card,
+no delay and no copying through the processor. With it, NeanderthalVJ
+becomes a live source in **Resolume Arena**, **VDMX**, **MadMapper**,
+**TouchDesigner**, **OBS** (to stream or record) and any other Syphon app,
+which can then mix it with other layers and send it to projectors and LED
+walls.
+
+It is an optional part of the build, because Syphon is compiled from source
+and that needs the full Xcode, not just the Command Line Tools:
+
+1. Install [Xcode](https://apps.apple.com/app/xcode/id497799835) from the
+   App Store and open it once to finish its setup.
+2. Install its Metal Toolchain:
+
+   ```bash
+   xcodebuild -downloadComponent MetalToolchain
+   ```
+
+3. Build and run NeanderthalVJ with Syphon:
+
+   ```bash
+   cargo run --release -p nv-ui --features syphon
+   ```
+
+4. In the **Export** tab, tick **Share the visuals through Syphon**. In
+   the other app, add a Syphon source and pick **NeanderthalVJ** (in
+   Resolume: *Sources → Syphon*; in OBS: *Syphon Client*).
+
+Only the visualization is shared, never the controls, at the size of the
+stage; press **Performance** (P) to make it fill the window. Nothing is
+copied until another app connects, and the visuals keep flowing to it even
+when NeanderthalVJ's own window is minimized. The panel says when an app is
+connected.
+
+No other app to hand? This receives a few seconds of frames, reports the
+frame rate and size, and saves the last frame as a picture:
+
+```bash
+cargo run --release -p nv-ui --features syphon --example syphon_check -- frame.png
+```
 
 ### Playing it live
 

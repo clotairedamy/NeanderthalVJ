@@ -3,7 +3,7 @@
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use ads::ui::{AdsButton, AdsField, ButtonVariant, FieldType, SegOption};
+use ads::ui::{AdsButton, AdsChoice, AdsField, ButtonVariant, FieldType, SegOption};
 use dioxus::prelude::*;
 use nv_export::{Format, Job, Progress};
 
@@ -209,6 +209,29 @@ pub fn ExportPanel(sources: Signal<Sources>) -> Element {
             }
             if audio.is_none() {
                 Hint { "Load a track first." }
+            }
+        }
+        if cfg!(all(target_os = "macos", feature = "syphon")) {
+            Group { title: "Live output",
+                AdsChoice {
+                    checked: s.syphon,
+                    onchange: move |on| settings.write().syphon = on,
+                    "Share the visuals through Syphon"
+                }
+                Hint {
+                    "Sends the visualization, without the controls, live to Resolume, VDMX, \
+                     MadMapper, OBS or any other Syphon app on this Mac, as a source named \
+                     \u{201c}NeanderthalVJ\u{201d}. No copy is made until an app connects."
+                }
+                if s.syphon {
+                    p { class: "nv-hint",
+                        if stage.syphon_clients.load(Ordering::Relaxed) {
+                            "Connected: another app is taking the frames."
+                        } else {
+                            "Waiting for an app to connect."
+                        }
+                    }
+                }
             }
         }
     }

@@ -68,6 +68,9 @@ pub struct StageShared {
     /// The window is minimized or hidden: nobody can see a frame, so none
     /// is drawn. The music and the clock carry on.
     pub hidden: AtomicBool,
+    /// Share the stage through Syphon; and whether another app is taking it.
+    pub syphon: AtomicBool,
+    pub syphon_clients: AtomicBool,
 }
 
 impl StageShared {
@@ -302,15 +305,53 @@ fn render_loop(
     let profile = std::env::var("NV_PROFILE").is_ok();
     let mut busy = 0.0f64;
     let mut next_frame = std::time::Instant::now();
+    #[cfg(all(target_os = "macos", feature = "syphon"))]
+    let mut syphon: Option<crate::syphon::Output> = None;
+    #[cfg(all(target_os = "macos", feature = "syphon"))]
+    let mut syphon_failed = false;
 
     while !shared.stop.load(Ordering::Relaxed) {
-        // minimized or hidden: draw nothing, and check again shortly
-        if shared.hidden.load(Ordering::Relaxed) {
+        // minimized or hidden: draw nothing, and check again shortly --
+        // unless another app is taking the frames through Syphon
+        if shared.hidden.load(Ordering::Relaxed) && !shared.syphon_clients.load(Ordering::Relaxed) {
             std::thread::sleep(std::time::Duration::from_millis(100));
             last = std::time::Instant::now();
             next_frame = last;
             continue;
         }
+        // Syphon copies the stage out of the window's frame, which needs the
+        // frame to allow it; only while it is on, as it costs a little
+        #[cfg(all(target_os = "macos", feature = "syphon"))]
+        {
+            let want = shared.syphon.load(Ordering::Relaxed);
+            let usage = if want && caps.usages.contains(wgpu::TextureUsages::COPY_SRC) {
+                wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC
+            } else {
+                wgpu::TextureUsages::RENDER_ATTACHMENT
+            };
+            if usage != config.usage {
+                config.usage = usage;
+                stale = true;
+            }
+            if want && syphon.is_none() && !syphon_failed {
+                match crate::syphon::Output::new(&device) {
+                    Ok(out) => {
+                        eprintln!("syphon: sharing as \"{}\"", crate::syphon::SERVER_NAME);
+                        syphon = Some(out);
+                    }
+                    Err(e) => {
+                        eprintln!("{e}");
+                        syphon_failed = true;
+                    }
+                }
+            }
+            if !want {
+                syphon = None;
+                syphon_failed = false;
+                shared.syphon_clients.store(false, Ordering::Relaxed);
+            }
+        }
+
         // follow the window and the stage
         if let Some(l) = *shared.layout.lock().unwrap() {
             let (w, h) = (l.surface.0.max(1), l.surface.1.max(1));
@@ -380,6 +421,23 @@ fn render_loop(
         let t_work = std::time::Instant::now();
         let view = tex.texture.create_view(&Default::default());
         scene.render(&device, &queue, &view, &frame, beat, dt, &params, camera);
+        #[cfg(all(target_os = "macos", feature = "syphon"))]
+        if let Some(out) = syphon.as_mut() {
+            let clients = out.has_clients();
+            shared.syphon_clients.store(clients, Ordering::Relaxed);
+            let copyable = config.usage.contains(wgpu::TextureUsages::COPY_SRC);
+            if let (true, true, Some(l)) = (clients, copyable, *shared.layout.lock().unwrap()) {
+                // the stage alone, clamped to the frame
+                let (x, y, w, h) = l.stage;
+                let x = (x.max(0.0) as u32).min(config.width);
+                let y = (y.max(0.0) as u32).min(config.height);
+                let w = (w.max(0.0) as u32).min(config.width - x);
+                let h = (h.max(0.0) as u32).min(config.height - y);
+                if let Err(e) = out.publish(&device, &queue, &tex.texture, (x, y, w, h)) {
+                    eprintln!("{e}");
+                }
+            }
+        }
         tex.present();
         busy += t_work.elapsed().as_secs_f64();
 
@@ -429,6 +487,7 @@ pub fn use_stage(shared: StageHandle, settings: Signal<Settings>) {
         let g = settings.read();
         *pub_params.params.lock().unwrap() = params_from(&g);
         pub_params.orbit.store(orbit_rate(&g).to_bits(), Ordering::Relaxed);
+        pub_params.syphon.store(g.syphon, Ordering::Relaxed);
         let fps = std::env::var("NV_FPS").ok().and_then(|v| v.parse().ok()).unwrap_or(g.frame_rate);
         pub_params.target_fps.store(fps, Ordering::Relaxed);
     });

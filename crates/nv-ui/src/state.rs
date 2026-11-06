@@ -245,6 +245,9 @@ pub struct Settings {
     pub pc_effect_amount: f64,
     /// How far the camera lunges in on each beat, 0..2, in both head modes.
     pub pc_camera_punch: f64,
+    /// Share the visuals live through Syphon (macOS), as a source for
+    /// Resolume, VDMX, MadMapper or OBS.
+    pub syphon: bool,
     /// How hard drum hits flash the head into lit facets, 0..2; the Depth
     /// Point Cloud's own, apart from the Drum glitch.
     pub pc_facets: f64,
@@ -376,6 +379,7 @@ impl Default for Settings {
             pc_effect_amount: 1.0,
             pc_camera_punch: 0.5,
             pc_facets: 0.0,
+            syphon: false,
             grid_cols: 40,
             grid_noise: 7.0,
             grid_warp: 1.0,
